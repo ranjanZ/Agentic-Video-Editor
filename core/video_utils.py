@@ -16,19 +16,22 @@ import subprocess
 
 # ── Detect MoviePy version and set API wrappers ──────────────────────────
 try:
-    # MoviePy 2.x imports
+    # MoviePy 2.x imports (2.1.2+)
     from moviepy import (
         VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips
     )
     from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
     MOVIEPY_V2 = True
-except ImportError:
-    # MoviePy 1.x imports
-    from moviepy import (
-        VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips
-    )
-    AudioFadeIn = None
-    AudioFadeOut = None
+except (ImportError, ModuleNotFoundError):
+    # Fallback: direct module imports for various MoviePy versions
+    from moviepy.video.io.VideoFileClip import VideoFileClip
+    from moviepy.audio.io.AudioFileClip import AudioFileClip
+    from moviepy import CompositeAudioClip, concatenate_audioclips
+    try:
+        from moviepy.audio.fx import AudioFadeIn, AudioFadeOut
+    except ImportError:
+        AudioFadeIn = None
+        AudioFadeOut = None
     MOVIEPY_V2 = False
 
 

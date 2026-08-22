@@ -93,6 +93,16 @@ def create_app(config=None):
             'version': '1.0.0'
         })
     
+    @app.route('/data/output/<path:filename>', methods=['GET'])
+    def serve_output(filename):
+        """Serve output video files."""
+        return send_from_directory(app.config['OUTPUT_FOLDER'], filename)
+    
+    @app.route('/data/temp/<path:filename>', methods=['GET'])
+    def serve_temp(filename):
+        """Serve temporary video files."""
+        return send_from_directory(app.config['TEMP_FOLDER'], filename)
+    
     @app.route('/api/tools', methods=['GET'])
     def list_tools():
         """List all available tools."""
