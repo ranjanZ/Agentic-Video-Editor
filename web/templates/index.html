@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Antigenic Video Editor - Agentic AI Video Editing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee; min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; padding: 30px 0; border-bottom: 1px solid #333; margin-bottom: 30px; }
+        header h1 { font-size: 2.5em; background: linear-gradient(90deg, #00d9ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+        header p { color: #888; font-size: 1.1em; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        @media (max-width: 968px) { .main-grid { grid-template-columns: 1fr; } }
+        .card { background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .card h2 { margin-bottom: 20px; color: #00d9ff; font-size: 1.5em; }
+        .chat-container { height: 400px; overflow-y: auto; border: 1px solid #333; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.2); }
+        .message { margin-bottom: 15px; padding: 12px 16px; border-radius: 10px; max-width: 85%; }
+        .message.user { background: #0066cc; margin-left: auto; border-bottom-right-radius: 2px; }
+        .message.assistant { background: #333; border-bottom-left-radius: 2px; }
+        .message.system { background: #444; color: #00ff88; width: 100%; max-width: 100%; text-align: center; }
+        .input-area { display: flex; gap: 10px; }
+        .input-area input { flex: 1; padding: 12px 16px; border: 1px solid #444; border-radius: 8px; background: rgba(0, 0, 0, 0.3); color: #fff; font-size: 1em; }
+        .input-area button { padding: 12px 24px; background: linear-gradient(90deg, #00d9ff, #00ff88); border: none; border-radius: 8px; color: #1a1a2e; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
+        .input-area button:hover { transform: scale(1.05); }
+        .workflow-list { list-style: none; }
+        .workflow-item { padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #00d9ff; }
+        .workflow-item h3 { color: #00ff88; margin-bottom: 8px; }
+        .workflow-item p { color: #888; font-size: 0.9em; }
+        .upload-zone { border: 2px dashed #444; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
+        .upload-zone:hover { border-color: #00d9ff; background: rgba(0, 217, 255, 0.05); }
+        .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .tool-card { background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: 8px; border: 1px solid #333; transition: all 0.3s; }
+        .tool-card:hover { border-color: #00d9ff; transform: translateY(-2px); }
+        .tool-card h4 { color: #00d9ff; margin-bottom: 8px; }
+        .tool-card p { font-size: 0.85em; color: #888; }
+        footer { text-align: center; padding: 30px; margin-top: 40px; border-top: 1px solid #333; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Antigenic Video Editor</h1>
+            <p>AI-Powered Agentic Video Editing Platform</p>
+        </header>
+        <div class="main-grid">
+            <div class="card">
+                <h2>🤖 AI Agent Chat</h2>
+                <div class="chat-container" id="chatContainer">
+                    <div class="message system">Welcome! I'm your video editing assistant. Tell me what you'd like to do with your video.</div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="chatInput" placeholder="Describe your video editing task..." onkeypress="if(event.key==='Enter')sendMessage()">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>⚡ Quick Workflows</h2>
+                <ul class="workflow-list">
+                    <li class="workflow-item"><h3>📱 Shorts from Long Video</h3><p>Automatically split long videos into engaging shorts with speed-up and music</p></li>
+                    <li class="workflow-item"><h3>🔇 Remove Silence</h3><p>Cut out silent pauses from speech videos using AI detection</p></li>
+                    <li class="workflow-item"><h3>🎵 Add Background Music</h3><p>Mix background music with your video at perfect levels</p></li>
+                    <li class="workflow-item"><h3>📐 Vertical Format</h3><p>Convert landscape videos to 9:16 for Shorts/Reels/TikTok</p></li>
+                </ul>
+                <h2 style="margin-top: 30px;">🛠️ Available Tools</h2>
+                <div class="tool-grid" id="toolGrid"></div>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 30px;">
+            <h2>📁 File Upload</h2>
+            <div class="upload-zone" id="uploadZone">
+                <p>📂 Drag & drop video/audio files here or click to browse</p>
+                <input type="file" id="fileInput" style="display:none" accept="video/*,audio/*" multiple>
+            </div>
+            <div id="uploadStatus"></div>
+        </div>
+        <footer><p>Antigenic Video Editor v1.0.0 | Built with ❤️ for creators</p></footer>
+    </div>
+    <script>
+        const API_BASE = '/api';
+        async function loadTools() {
+            try {
+                const response = await fetch(`${API_BASE}/tools`);
+                const data = await response.json();
+                document.getElementById('toolGrid').innerHTML = data.tools.map(tool => 
+                    `<div class="tool-card"><h4>${tool.name}</h4><p>${tool.description}</p></div>`
+                ).join('');
+            } catch (error) { console.error('Failed to load tools:', error); }
+        }
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            addMessage(message, 'user');
+            input.value = '';
+            try {
+                const response = await fetch(`${API_BASE}/agent/chat`, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message})
+                });
+                const data = await response.json();
+                addMessage(data.content, 'assistant');
+                if (data.metadata?.result?.output_path) {
+                    addMessage(`✅ Output: ${data.metadata.result.output_path}`, 'system');
+                }
+            } catch (error) { addMessage('Error: Could not connect to server', 'system'); }
+        }
+        function addMessage(content, role) {
+            const container = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+            div.textContent = content;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('fileInput');
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => { uploadZone.classList.remove('dragover'); });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); });
+        async function handleFiles(files) {
+            for (let file of files) {
+                const formData = new FormData(); formData.append('file', file);
+                try {
+                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                    const data = await response.json();
+                    if (data.success) {
+                        document.getElementById('uploadStatus').innerHTML += `<p style="color:#00ff88">✓ Uploaded: ${data.filename}</p>`;
+                    }
+                } catch (error) {
+                    document.getElementById('uploadStatus').innerHTML += `<p style="color:#ff4444">✗ Failed: ${file.name}</p>`;
+                }
+            }
+        }
+        loadTools();
+    </script>
+</body>
+</html>
