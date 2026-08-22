@@ -7,6 +7,7 @@ reusable tool interface for agentic invocation.
 
 import os
 import math
+from datetime import datetime
 from typing import Dict, Any, Optional
 
 from .base_tool import BaseTool, ToolResult
@@ -186,7 +187,7 @@ class VideoSplitTool(BaseTool):
                 
                 # Extract and process segment
                 segment = subclip(video, start, end)
-                sped_up = apply_speed(segment, start, end)
+                sped_up = apply_speed(segment, speedup)
                 
                 # Apply vertical mode if enabled
                 if vertical_mode:
@@ -206,7 +207,7 @@ class VideoSplitTool(BaseTool):
                 
                 final_clip = set_audio(sped_up, final_audio)
                 
-                # Export with timestamp in filename
+                # Export with timestamp in filename - save to output_dir (not root)
                 out_name = f"segment_{seg_num:03d}_{timestamp}_{int(max_segment_duration_minutes)}min_sped_{int(target_output_duration_seconds)}s.{output_format}"
                 output_path = os.path.join(output_dir, out_name)
                 
