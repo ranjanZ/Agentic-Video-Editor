@@ -177,6 +177,7 @@ Analyze user requests and determine which tools to use. Always explain your plan
         This is a simple rule-based implementation. In production,
         this would use an LLM to understand intent and generate plans.
         """
+        import re
         user_input_lower = user_input.lower()
         
         # Detect intent keywords
@@ -190,20 +191,47 @@ Analyze user requests and determine which tools to use. Always explain your plan
         if not any([wants_split, wants_silence_removal, wants_vertical, wants_transcription, wants_speed, wants_music]):
             return None
         
+        # Extract file paths from user input
+        video_path = None
+        audio_path = None
+        output_dir = "./output"
+        
+        # Match file paths with extensions
+        path_pattern = r'(/[^\s"\']+|[\w./\\]+\.(mp4|avi|mov|mkv|mp3|wav|ogg|flac))'
+        paths = re.findall(path_pattern, user_input, re.IGNORECASE)
+        
+        video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.webm'}
+        audio_extensions = {'.mp3', '.wav', '.ogg', '.flac', '.aac'}
+        
+        for path_match in paths:
+            path = path_match[0] if isinstance(path_match, tuple) else path_match
+            lower_path = path.lower()
+            
+            if any(lower_path.endswith(ext) for ext in video_extensions):
+                if not video_path:
+                    video_path = path
+            elif any(lower_path.endswith(ext) for ext in audio_extensions):
+                if not audio_path:
+                    audio_path = path
+        
+        # If we don't have required paths, return None to prompt for more info
+        if wants_split and (not video_path or not audio_path):
+            return None
+        
         plan = []
         
         # Build plan based on detected intents
         if wants_transcription:
             plan.append({
                 "tool": "transcription",
-                "params": {"input_path": "{{video_path}}"}
+                "params": {"input_path": video_path or "{{video_path}}"}
             })
         
         if wants_silence_removal:
             plan.append({
                 "tool": "silence_removal",
                 "params": {
-                    "video_path": "{{video_path}}",
+                    "video_path": video_path or "{{video_path}}",
                     "output_path": "{{temp_output}}_no_silence.mp4"
                 }
             })
@@ -212,7 +240,7 @@ Analyze user requests and determine which tools to use. Always explain your plan
             plan.append({
                 "tool": "vertical_crop",
                 "params": {
-                    "video_path": "{{video_path}}",
+                    "video_path": video_path or "{{video_path}}",
                     "output_path": "{{temp_output}}_vertical.mp4"
                 }
             })
@@ -221,7 +249,7 @@ Analyze user requests and determine which tools to use. Always explain your plan
             plan.append({
                 "tool": "speed_adjust",
                 "params": {
-                    "video_path": "{{video_path}}",
+                    "video_path": video_path or "{{video_path}}",
                     "output_path": "{{temp_output}}_sped.mp4",
                     "speed_factor": 2.0
                 }
@@ -231,9 +259,9 @@ Analyze user requests and determine which tools to use. Always explain your plan
             plan.append({
                 "tool": "video_split",
                 "params": {
-                    "video_path": "{{video_path}}",
-                    "audio_path": "{{audio_path}}",
-                    "output_dir": "{{output_dir}}"
+                    "video_path": video_path or "{{video_path}}",
+                    "audio_path": audio_path or "{{audio_path}}",
+                    "output_dir": output_dir
                 }
             })
         
@@ -241,8 +269,8 @@ Analyze user requests and determine which tools to use. Always explain your plan
             plan.append({
                 "tool": "audio_mix",
                 "params": {
-                    "video_path": "{{video_path}}",
-                    "audio_path": "{{audio_path}}",
+                    "video_path": video_path or "{{video_path}}",
+                    "audio_path": audio_path or "{{audio_path}}",
                     "output_path": "{{temp_output}}_with_music.mp4"
                 }
             })

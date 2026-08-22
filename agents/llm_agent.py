@@ -109,7 +109,11 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                 tool_name = call.get("tool")
                 params = call.get("params", {})
                 
-                # Inject context into parameters
+                # Extract additional params from user input text
+                extracted_params = self._extract_params_from_text(user_input, tool_name)
+                params.update(extracted_params)
+                
+                # Inject context into parameters (highest priority)
                 if context:
                     if "video_path" not in params and context.get("video_path"):
                         params["video_path"] = context["video_path"]
@@ -117,6 +121,25 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                         params["audio_path"] = context["audio_path"]
                     if "output_dir" not in params and context.get("output_dir"):
                         params["output_dir"] = context["output_dir"]
+                
+                # Validate required parameters for video_split tool
+                if tool_name == "video_split":
+                    missing_required = []
+                    if not params.get("video_path"):
+                        missing_required.append("video_path")
+                    if not params.get("audio_path"):
+                        missing_required.append("audio_path")
+                    if not params.get("output_dir"):
+                        missing_required.append("output_dir")
+                    
+                    if missing_required:
+                        self._update_state(AgentState.WAITING_INPUT)
+                        return AgentMessage(
+                            role="assistant",
+                            content=f"I need the following information to split your video:\n" +
+                                    "\n".join(f"- {param}" for param in missing_required) +
+                                    "\n\nPlease provide these details or upload the files."
+                        )
                 
                 # Execute tool via MCP server
                 result = self.mcp_server.call_tool(tool_name, params)
@@ -213,6 +236,8 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                             tool_calls = [parsed]
                         elif "tools" in parsed:
                             tool_calls = parsed["tools"]
+                    elif isinstance(parsed, list):
+                        tool_calls = parsed
                 except json.JSONDecodeError:
                     pass
                     
@@ -220,6 +245,52 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
             pass
         
         return tool_calls
+    
+    def _extract_params_from_text(self, text: str, tool_name: str) -> Dict[str, Any]:
+        """Extract parameters from natural language text using regex patterns."""
+        import re
+        params = {}
+        
+        # Extract file paths (common patterns)
+        path_pattern = r'(/[^\s"\']+|[\w./\\]+\.(mp4|avi|mov|mkv|mp3|wav|ogg|flac))'
+        paths = re.findall(path_pattern, text, re.IGNORECASE)
+        
+        video_extensions = {'.mp4', '.avi', '.mov', '.mkv', '.webm'}
+        audio_extensions = {'.mp3', '.wav', '.ogg', '.flac', '.aac'}
+        
+        for path_match in paths:
+            # Handle tuple match from regex
+            path = path_match[0] if isinstance(path_match, tuple) else path_match
+            lower_path = path.lower()
+            
+            if any(lower_path.endswith(ext) for ext in video_extensions):
+                if 'video_path' not in params:
+                    params['video_path'] = path
+            elif any(lower_path.endswith(ext) for ext in audio_extensions):
+                if 'audio_path' not in params:
+                    params['audio_path'] = path
+        
+        # Extract output directory patterns
+        output_patterns = [
+            r'output[_\s]*dir(?:ectory)?[:\s]+([^\s,]+)',
+            r'save[:\s]+([^\s,]+)',
+            r'to[:\s]+([^\s,]+)'
+        ]
+        for pattern in output_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match and 'output_dir' not in params:
+                params['output_dir'] = match.group(1).strip('"\'')
+        
+        # Extract numeric parameters
+        duration_match = re.search(r'(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|seconds?|secs?)', text, re.IGNORECASE)
+        if duration_match:
+            value = float(duration_match.group(1))
+            if 'minute' in duration_match.group(0).lower():
+                params['max_segment_duration_minutes'] = value
+            else:
+                params['target_output_duration_seconds'] = value
+        
+        return params
     
     def chat_stream(self, user_input: str, context: Optional[Dict[str, Any]] = None):
         """
