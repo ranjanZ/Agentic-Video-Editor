@@ -16,7 +16,7 @@ audio_fade_out_seconds: 1.0
 # ── Audio start position (NEW) ──
 # Fixed mode: every segment's music starts at this second of the song.
 # (If the window runs past the song's end, it wraps around / loops seamlessly.)
-audio_start_seconds: 15
+audio_start_seconds: 60
 
 # Random mode: true = each segment picks a random start position in the song.
 # Overrides audio_start_seconds when enabled.
