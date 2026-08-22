@@ -6,9 +6,9 @@ and removes portions without speech.
 """
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import whisper
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+from moviepy import VideoFileClip, concatenate_videoclips
 
 from .base_tool import BaseTool, ToolResult
 
@@ -64,7 +64,8 @@ class SilenceRemovalTool(BaseTool):
     def execute(
         self,
         video_path: str,
-        output_path: str,
+        output_path: Optional[str] = None,
+        output_dir: Optional[str] = None,
         model_size: str = "base",
         padding_ms: int = 200,
         task: str = "translate",
@@ -75,7 +76,8 @@ class SilenceRemovalTool(BaseTool):
         
         Args:
             video_path: Path to input video
-            output_path: Path for output video
+            output_path: Path for output video (optional, will generate if not provided)
+            output_dir: Directory for output (used if output_path not provided)
             model_size: Whisper model size
             padding_ms: Padding around speech segments in milliseconds
             task: "transcribe" or "translate"
@@ -84,14 +86,28 @@ class SilenceRemovalTool(BaseTool):
             ToolResult with output path and segment information
         """
         try:
+            from datetime import datetime
+            
             if not os.path.exists(video_path):
                 return ToolResult(
                     success=False,
                     error=f"Video file not found: {video_path}"
                 )
             
+            # Generate output path with timestamp if not provided
+            if not output_path:
+                if not output_dir:
+                    output_dir = "data/output"
+                os.makedirs(output_dir, exist_ok=True)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                base_name = os.path.basename(video_path)
+                name_without_ext = os.path.splitext(base_name)[0]
+                output_path = os.path.join(output_dir, f"{name_without_ext}_no_silence_{timestamp}.mp4")
+            
             # Create temp directory if needed
-            temp_audio = "temp_extracted_audio.wav"
+            temp_dir = "data/temp"
+            os.makedirs(temp_dir, exist_ok=True)
+            temp_audio = os.path.join(temp_dir, f"temp_extracted_audio_{datetime.now().strftime('%Y%m%d_%H%M%S')}.wav")
             
             # Step 1: Extract audio
             video = VideoFileClip(video_path)
@@ -177,3 +193,4 @@ class SilenceRemovalTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "silence_removal"}
             )
+

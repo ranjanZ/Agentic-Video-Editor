@@ -24,7 +24,7 @@ try:
     MOVIEPY_V2 = True
 except ImportError:
     # MoviePy 1.x imports
-    from moviepy.editor import (
+    from moviepy import (
         VideoFileClip, AudioFileClip, CompositeAudioClip, concatenate_audioclips
     )
     AudioFadeIn = None
@@ -61,7 +61,7 @@ def apply_speed(clip, factor):
     if MOVIEPY_V2:
         return clip.with_speed_scaled(factor)
     try:
-        from moviepy.editor import vfx
+        from moviepy import vfx
         return clip.fx(vfx.speedx, factor)
     except Exception:
         return clip.speedx(factor)
