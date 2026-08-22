@@ -116,15 +116,27 @@ def create_app(config=None):
     
     @app.route('/api/agent/chat', methods=['POST'])
     def agent_chat():
-        """Chat with the video editing agent."""
+        """Chat with the video editing agent (LLM-powered)."""
         data = request.json
         user_input = data.get('message', '')
+        context = data.get('context', {})  # Optional context with file paths
         
         if not user_input:
             return jsonify({'error': 'No message provided'}), 400
         
-        response = app.video_agent.process(user_input)
-        return jsonify(response.to_dict())
+        # Use LLM agent for intelligent processing
+        from agents.llm_agent import get_llm_agent
+        llm_agent = get_llm_agent()
+        
+        response = llm_agent.process(user_input, context)
+        
+        result = response.to_dict()
+        
+        # Ensure output_files is in the response for frontend display
+        if response.metadata and response.metadata.get('output_files'):
+            result['output_files'] = response.metadata['output_files']
+        
+        return jsonify(result)
     
     @app.route('/api/agent/status', methods=['GET'])
     def agent_status():

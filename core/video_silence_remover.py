@@ -1,5 +1,5 @@
 import whisper
-from moviepy.editor import VideoFileClip, concatenate_videoclips
+from moviepy import VideoFileClip, concatenate_videoclips
 import os
 
 def extract_speech_from_video(video_path, output_audio_path="temp_audio.wav"):

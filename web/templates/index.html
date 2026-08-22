@@ -98,16 +98,44 @@
             if (!message) return;
             addMessage(message, 'user');
             input.value = '';
+            
+            // Get context from uploaded files
+            const context = {};
+            const lastUploadedFile = window.lastUploadedFile;
+            if (lastUploadedFile) {
+                if (lastUploadedFile.type.startsWith('video/')) {
+                    context.video_path = lastUploadedFile.filepath;
+                } else if (lastUploadedFile.type.startsWith('audio/')) {
+                    context.audio_path = lastUploadedFile.filepath;
+                }
+            }
+            
             try {
                 const response = await fetch(`${API_BASE}/agent/chat`, {
-                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({message})
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({message, context})
                 });
                 const data = await response.json();
                 addMessage(data.content, 'assistant');
-                if (data.metadata?.result?.output_path) {
+                
+                // Display output files prominently
+                if (data.output_files && data.output_files.length > 0) {
+                    const fileList = data.output_files.map(f => `<div>📁 ${f}</div>`).join('');
+                    addMessage(`<div style="color:#00ff88">${fileList}</div>`, 'system');
+                } else if (data.metadata?.result?.output_path) {
                     addMessage(`✅ Output: ${data.metadata.result.output_path}`, 'system');
+                } else if (data.metadata?.output_files) {
+                    const files = Array.isArray(data.metadata.output_files) ? data.metadata.output_files : [data.metadata.output_files];
+                    const fileList = files.filter(f => f).map(f => `<div>📁 ${f}</div>`).join('');
+                    if (fileList) {
+                        addMessage(`<div style="color:#00ff88">${fileList}</div>`, 'system');
+                    }
                 }
-            } catch (error) { addMessage('Error: Could not connect to server', 'system'); }
+            } catch (error) { 
+                addMessage('Error: Could not connect to server', 'system'); 
+                console.error(error);
+            }
         }
         function addMessage(content, role) {
             const container = document.getElementById('chatContainer');
@@ -126,14 +154,26 @@
             e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files);
         });
         fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); });
+        
+        // Store last uploaded file info for context
         async function handleFiles(files) {
             for (let file of files) {
-                const formData = new FormData(); formData.append('file', file);
+                const formData = new FormData(); 
+                formData.append('file', file);
                 try {
-                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
+                    const response = await fetch(`${API_BASE}/upload`, { 
+                        method: 'POST', 
+                        body: formData 
+                    });
                     const data = await response.json();
                     if (data.success) {
                         document.getElementById('uploadStatus').innerHTML += `<p style="color:#00ff88">✓ Uploaded: ${data.filename}</p>`;
+                        // Store for context in chat
+                        window.lastUploadedFile = {
+                            type: file.type,
+                            filepath: data.filepath,
+                            filename: data.filename
+                        };
                     }
                 } catch (error) {
                     document.getElementById('uploadStatus').innerHTML += `<p style="color:#ff4444">✗ Failed: ${file.name}</p>`;

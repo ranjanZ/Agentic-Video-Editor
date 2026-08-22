@@ -7,7 +7,7 @@ This tool extracts audio from video and transcribes it to text.
 import os
 from typing import Dict, Any, Optional
 import whisper
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 
 from .base_tool import BaseTool, ToolResult
 

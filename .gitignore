@@ -8,6 +8,8 @@ __pycache__/
 env/
 venv/
 .venv/
+.ENV
+.venv.bak/
 pip-log.txt
 pip-delete-this-directory.txt
 .tox/
@@ -18,16 +20,39 @@ nosetests.xml
 coverage.xml
 *.cover
 *.log
-.DS_Store
-Thumbs.db
+*.pot
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 
-# Dependencies
-node_modules/
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Local configuration
+# Environment
 .env
-.env.local
-*.env*
+.venv
+env/
+venv/
+ENV
+.ENV
 
 # IDE
 .vscode/
@@ -36,8 +61,7 @@ node_modules/
 *.swo
 *.tmp
 
-# Build and distribution artifacts
-dist/
-build/
-*.egg-info/
+# OS
+.DS_Store
+Thumbs.db
 ```

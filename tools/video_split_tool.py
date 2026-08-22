@@ -139,6 +139,9 @@ class VideoSplitTool(BaseTool):
             
             os.makedirs(output_dir, exist_ok=True)
             
+            # Generate timestamp for output files
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
             # Load video
             video = VideoFileClip(video_path)
             total_duration = video.duration
@@ -203,8 +206,8 @@ class VideoSplitTool(BaseTool):
                 
                 final_clip = set_audio(sped_up, final_audio)
                 
-                # Export
-                out_name = f"segment_{seg_num:03d}_{int(max_segment_duration_minutes)}min_sped_{int(target_output_duration_seconds)}s.{output_format}"
+                # Export with timestamp in filename
+                out_name = f"segment_{seg_num:03d}_{timestamp}_{int(max_segment_duration_minutes)}min_sped_{int(target_output_duration_seconds)}s.{output_format}"
                 output_path = os.path.join(output_dir, out_name)
                 
                 final_clip.write_videofile(
@@ -232,11 +235,13 @@ class VideoSplitTool(BaseTool):
             return ToolResult(
                 success=True,
                 message=f"Successfully processed {len(output_files)} segments",
+                output_path=output_files[0] if output_files else None,
                 metadata={
                     "output_files": output_files,
                     "num_segments": num_segments,
                     "speedup_factor": speedup,
-                    "total_input_duration": total_duration
+                    "total_input_duration": total_duration,
+                    "timestamp": timestamp
                 }
             )
             
