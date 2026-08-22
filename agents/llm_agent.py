@@ -96,8 +96,10 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
         
         llm_response = response["content"]
         
-        # Try to parse tool calls from LLM response
-        tool_calls = self._parse_tool_calls(llm_response)
+        # Try to parse tool calls from LLM response (check both parsed and direct tool_calls)
+        tool_calls = response.get("tool_calls", [])
+        if not tool_calls:
+            tool_calls = self._parse_tool_calls(llm_response)
         
         if tool_calls:
             self._update_state(AgentState.EXECUTING)

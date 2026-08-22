@@ -42,11 +42,15 @@ class AgentMessage:
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "role": self.role,
             "content": self.content,
             "metadata": self.metadata,
         }
+        # Include output_files at top level if present in metadata
+        if self.metadata and 'output_files' in self.metadata:
+            result['output_files'] = self.metadata['output_files']
+        return result
 
 
 class BaseAgent(ABC):
