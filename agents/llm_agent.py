@@ -32,14 +32,15 @@ class LLMAgent(BaseAgent):
         self.mcp_server = get_mcp_server()
         
         # Get available tools from MCP server
-        self.available_tools = self.mcp_server.list_tools()
-        self.tool_names = [t["name"] for t in self.available_tools]
+        mcp_tools = self.mcp_server.list_tools()
+        self._tool_definitions = mcp_tools
+        self._tool_names = [t["name"] for t in mcp_tools]
         
         self._system_prompt = f"""You are an expert video editing assistant powered by AI.
-You have access to these video editing tools: {', '.join(self.tool_names)}
+You have access to these video editing tools: {', '.join(self._tool_names)}
 
 Tool descriptions:
-{json.dumps(self.available_tools, indent=2)}
+{json.dumps(self._tool_definitions, indent=2)}
 
 When users ask for video editing:
 1. Identify which tool(s) they need
@@ -181,7 +182,7 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
             ]
             
             # Simple extraction: look for tool name and params
-            for tool_info in self.available_tools:
+            for tool_info in self._tool_definitions:
                 tool_name = tool_info["name"]
                 if tool_name in response_text.lower():
                     # Found a tool reference, try to extract params
@@ -234,6 +235,46 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
         if response.get("stream"):
             for chunk in response["response"]:
                 yield chunk.decode('utf-8') if isinstance(chunk, bytes) else chunk
+    
+    def execute_plan(self, plan: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Execute a planned sequence of tool calls.
+        
+        Args:
+            plan: List of tool call specifications with format:
+                  [{"tool": "tool_name", "params": {...}}, ...]
+        
+        Returns:
+            Results of the execution with success status and outputs
+        """
+        results = []
+        success = True
+        
+        for step in plan:
+            tool_name = step.get("tool")
+            params = step.get("params", {})
+            
+            if not tool_name:
+                results.append({
+                    "success": False,
+                    "error": "Missing tool name in plan step"
+                })
+                success = False
+                continue
+            
+            # Execute tool via MCP server
+            result = self.mcp_server.call_tool(tool_name, params)
+            results.append(result)
+            
+            if not result.get("success"):
+                success = False
+                break
+        
+        return {
+            "success": success,
+            "results": results,
+            "output_files": [r.get("output_path") for r in results if r.get("output_path")]
+        }
 
 
 # Singleton instance
