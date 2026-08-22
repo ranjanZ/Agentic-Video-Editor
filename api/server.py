@@ -30,13 +30,16 @@ from agents.workflow_agent import WorkflowAgent
 def create_app(config=None):
     """Create and configure the Flask application."""
     
-    app = Flask(__name__, static_folder='../web/static', template_folder='../web/templates')
+    app = Flask(__name__, 
+                static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web', 'static'),
+                template_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'web', 'templates'))
     CORS(app)
     
-    # Configuration
-    app.config['UPLOAD_FOLDER'] = 'data/input'
-    app.config['OUTPUT_FOLDER'] = 'data/output'
-    app.config['TEMP_FOLDER'] = 'data/temp'
+    # Configuration - use absolute paths
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'data', 'input')
+    app.config['OUTPUT_FOLDER'] = os.path.join(base_dir, 'data', 'output')
+    app.config['TEMP_FOLDER'] = os.path.join(base_dir, 'data', 'temp')
     app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max
     
     # Ensure directories exist
@@ -82,7 +85,7 @@ def create_app(config=None):
     @app.route('/')
     def index():
         """Serve the main web interface."""
-        return send_from_directory('../web/templates', 'index.html')
+        return send_from_directory(app.template_folder, 'index.html')
     
     @app.route('/api/health', methods=['GET'])
     def health_check():
@@ -93,15 +96,19 @@ def create_app(config=None):
             'version': '1.0.0'
         })
     
-    @app.route('/data/output/<path:filename>', methods=['GET'])
-    def serve_output(filename):
-        """Serve output video files."""
-        return send_from_directory(app.config['OUTPUT_FOLDER'], filename)
-    
-    @app.route('/data/temp/<path:filename>', methods=['GET'])
-    def serve_temp(filename):
-        """Serve temporary video files."""
-        return send_from_directory(app.config['TEMP_FOLDER'], filename)
+    @app.route('/data/<folder_type>/<path:filename>', methods=['GET'])
+    def serve_data_files(folder_type, filename):
+        """Serve data files (output, temp, input)."""
+        if folder_type == 'output':
+            folder = app.config['OUTPUT_FOLDER']
+        elif folder_type == 'temp':
+            folder = app.config['TEMP_FOLDER']
+        elif folder_type == 'input':
+            folder = app.config['UPLOAD_FOLDER']
+        else:
+            return jsonify({'error': 'Invalid folder type'}), 400
+        
+        return send_from_directory(folder, filename)
     
     @app.route('/api/tools', methods=['GET'])
     def list_tools():

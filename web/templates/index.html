@@ -3,234 +3,805 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Antigenic Video Editor - Agentic AI Video Editing</title>
+    <title>Antigenic Video Editor - Professional AI Video Editing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #eee; min-height: 100vh;
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --dark-bg: #0f0f1a;
+            --card-bg: rgba(255, 255, 255, 0.08);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text-primary: #ffffff;
+            --text-secondary: #b8b8d1;
+            --text-muted: #6b6b8a;
+            --success: #00d9a5;
+            --error: #ff6b6b;
+            --warning: #ffd93d;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        header { text-align: center; padding: 30px 0; border-bottom: 1px solid #333; margin-bottom: 30px; }
-        header h1 { font-size: 2.5em; background: linear-gradient(90deg, #00d9ff, #00ff88); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
-        header p { color: #888; font-size: 1.1em; }
-        .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-        @media (max-width: 968px) { .main-grid { grid-template-columns: 1fr; } }
-        .card { background: rgba(255, 255, 255, 0.05); border-radius: 15px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .card h2 { margin-bottom: 20px; color: #00d9ff; font-size: 1.5em; }
-        .chat-container { height: 400px; overflow-y: auto; border: 1px solid #333; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: rgba(0, 0, 0, 0.2); }
-        .message { margin-bottom: 15px; padding: 12px 16px; border-radius: 10px; max-width: 85%; }
-        .message.user { background: #0066cc; margin-left: auto; border-bottom-right-radius: 2px; }
-        .message.assistant { background: #333; border-bottom-left-radius: 2px; }
-        .message.system { background: #444; color: #00ff88; width: 100%; max-width: 100%; text-align: center; }
-        .input-area { display: flex; gap: 10px; }
-        .input-area input { flex: 1; padding: 12px 16px; border: 1px solid #444; border-radius: 8px; background: rgba(0, 0, 0, 0.3); color: #fff; font-size: 1em; }
-        .input-area button { padding: 12px 24px; background: linear-gradient(90deg, #00d9ff, #00ff88); border: none; border-radius: 8px; color: #1a1a2e; font-weight: bold; cursor: pointer; transition: transform 0.2s; }
-        .input-area button:hover { transform: scale(1.05); }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--dark-bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(102, 126, 234, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(118, 75, 162, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(79, 172, 254, 0.15) 0px, transparent 50%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        
+        /* Header */
+        header { 
+            text-align: center; 
+            padding: 40px 0; 
+            border-bottom: 1px solid var(--card-border); 
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: var(--accent-gradient);
+        }
+        
+        header h1 { 
+            font-size: 3em; 
+            font-weight: 700;
+            background: var(--accent-gradient); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+        
+        header p { 
+            color: var(--text-secondary); 
+            font-size: 1.2em;
+            font-weight: 300;
+        }
+        
+        /* Main Grid */
+        .main-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1024px) { 
+            .main-grid { 
+                grid-template-columns: 1fr;
+            } 
+        }
+        
+        /* Cards */
+        .card { 
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px; 
+            padding: 30px; 
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .card h2 { 
+            margin-bottom: 24px; 
+            font-size: 1.6em;
+            font-weight: 600;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Chat Container */
+        .chat-container { 
+            height: 450px; 
+            overflow-y: auto; 
+            border: 1px solid var(--card-border); 
+            border-radius: 16px; 
+            padding: 20px; 
+            margin-bottom: 20px; 
+            background: rgba(0, 0, 0, 0.3);
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-gradient) transparent;
+        }
+        
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: var(--accent-gradient);
+            border-radius: 4px;
+        }
+        
+        .message { 
+            margin-bottom: 16px; 
+            padding: 14px 18px; 
+            border-radius: 16px; 
+            max-width: 85%;
+            animation: fadeIn 0.3s ease;
+            line-height: 1.5;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message.user { 
+            background: var(--primary-gradient);
+            margin-left: auto; 
+            border-bottom-right-radius: 4px;
+            color: white;
+        }
+        
+        .message.assistant { 
+            background: rgba(255, 255, 255, 0.1);
+            border-bottom-left-radius: 4px;
+            color: var(--text-primary);
+        }
+        
+        .message.system { 
+            background: rgba(0, 217, 165, 0.15);
+            color: var(--success);
+            width: 100%; 
+            max-width: 100%; 
+            text-align: center;
+            border: 1px solid rgba(0, 217, 165, 0.3);
+        }
+        
+        /* Input Area */
+        .input-area { 
+            display: flex; 
+            gap: 12px; 
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .input-area input { 
+            flex: 1; 
+            padding: 14px 20px; 
+            border: none; 
+            border-radius: 12px; 
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary); 
+            font-size: 1em;
+            font-family: inherit;
+            outline: none;
+            transition: background 0.3s;
+        }
+        
+        .input-area input:focus {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-area input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .input-area button { 
+            padding: 14px 28px; 
+            background: var(--accent-gradient);
+            border: none; 
+            border-radius: 12px; 
+            color: white; 
+            font-weight: 600; 
+            font-size: 1em;
+            cursor: pointer; 
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .input-area button:hover { 
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(79, 172, 254, 0.4);
+        }
+        
+        .input-area button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Workflow List */
         .workflow-list { list-style: none; }
-        .workflow-item { padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #00d9ff; }
-        .workflow-item h3 { color: #00ff88; margin-bottom: 8px; }
-        .workflow-item p { color: #888; font-size: 0.9em; }
-        .upload-zone { border: 2px dashed #444; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; margin-bottom: 20px; }
-        .upload-zone:hover { border-color: #00d9ff; background: rgba(0, 217, 255, 0.05); }
-        .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .tool-card { background: rgba(0, 0, 0, 0.2); padding: 15px; border-radius: 8px; border: 1px solid #333; transition: all 0.3s; }
-        .tool-card:hover { border-color: #00d9ff; transform: translateY(-2px); }
-        .tool-card h4 { color: #00d9ff; margin-bottom: 8px; }
-        .tool-card p { font-size: 0.85em; color: #888; }
-        footer { text-align: center; padding: 30px; margin-top: 40px; border-top: 1px solid #333; color: #666; }
+        
+        .workflow-item { 
+            padding: 18px; 
+            background: rgba(0, 0, 0, 0.2); 
+            border-radius: 12px; 
+            margin-bottom: 12px; 
+            border-left: 4px solid transparent;
+            border-image: var(--accent-gradient) 1;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .workflow-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .workflow-item h3 { 
+            color: var(--success);
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        
+        .workflow-item p { 
+            color: var(--text-secondary); 
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        
+        /* Tool Grid */
+        .tool-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 16px; 
+            margin-top: 20px;
+        }
+        
+        .tool-card { 
+            background: rgba(0, 0, 0, 0.2); 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid var(--card-border);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .tool-card:hover { 
+            border-color: #4facfe;
+            transform: translateY(-4px);
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .tool-card h4 { 
+            color: #4facfe;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .tool-card p { 
+            font-size: 0.85em; 
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        
+        /* Upload Zone */
+        .upload-section {
+            margin-top: 30px;
+        }
+        
+        .upload-zone { 
+            border: 2px dashed var(--card-border);
+            border-radius: 16px; 
+            padding: 50px 30px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .upload-zone:hover, .upload-zone.dragover { 
+            border-color: #4facfe; 
+            background: rgba(79, 172, 254, 0.05);
+            transform: scale(1.01);
+        }
+        
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        
+        .upload-status {
+            margin-top: 15px;
+        }
+        
+        .upload-status p {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .upload-status .success {
+            background: rgba(0, 217, 165, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(0, 217, 165, 0.3);
+        }
+        
+        .upload-status .error {
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--error);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .progress-container.active {
+            display: block;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        /* Video Player Section */
+        .video-player-container {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+        }
+        
+        .video-wrapper video {
+            width: 100%;
+            max-height: 500px;
+            display: block;
+        }
+        
+        .video-info {
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .video-info h4 {
+            color: var(--success);
+            font-size: 1.1em;
+        }
+        
+        .download-btn {
+            padding: 10px 20px;
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(79, 172, 254, 0.4);
+        }
+        
+        /* File Info Cards */
+        .file-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .file-card {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+        }
+        
+        .file-card h5 {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+        
+        .file-card p {
+            color: var(--text-primary);
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        
+        .file-card .default {
+            color: var(--text-muted);
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+        
+        /* Footer */
+        footer { 
+            text-align: center; 
+            padding: 40px; 
+            margin-top: 60px; 
+            border-top: 1px solid var(--card-border); 
+            color: var(--text-muted);
+        }
+        
+        footer p {
+            font-size: 0.9em;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 { font-size: 2em; }
+            .card { padding: 20px; }
+            .main-grid { gap: 20px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🎬 Antigenic Video Editor</h1>
-            <p>AI-Powered Agentic Video Editing Platform</p>
+            <p>Professional AI-Powered Video Editing Platform</p>
         </header>
+        
         <div class="main-grid">
             <div class="card">
                 <h2>🤖 AI Agent Chat</h2>
                 <div class="chat-container" id="chatContainer">
-                    <div class="message system">Welcome! I'm your video editing assistant. Tell me what you'd like to do with your video.</div>
+                    <div class="message system">Welcome! I'm your professional video editing assistant. Upload your files and tell me what you'd like to create.</div>
                 </div>
+                
+                <!-- Progress Bar -->
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Processing...</div>
+                </div>
+                
                 <div class="input-area">
                     <input type="text" id="chatInput" placeholder="Describe your video editing task..." onkeypress="if(event.key==='Enter')sendMessage()">
-                    <button onclick="sendMessage()">Send</button>
+                    <button onclick="sendMessage()" id="sendBtn">Send</button>
                 </div>
             </div>
+            
             <div class="card">
                 <h2>⚡ Quick Workflows</h2>
                 <ul class="workflow-list">
-                    <li class="workflow-item"><h3>📱 Shorts from Long Video</h3><p>Automatically split long videos into engaging shorts with speed-up and music</p></li>
-                    <li class="workflow-item"><h3>🔇 Remove Silence</h3><p>Cut out silent pauses from speech videos using AI detection</p></li>
-                    <li class="workflow-item"><h3>🎵 Add Background Music</h3><p>Mix background music with your video at perfect levels</p></li>
-                    <li class="workflow-item"><h3>📐 Vertical Format</h3><p>Convert landscape videos to 9:16 for Shorts/Reels/TikTok</p></li>
+                    <li class="workflow-item" onclick="useWorkflow('shorts')">
+                        <h3>📱 Shorts from Long Video</h3>
+                        <p>Automatically split long videos into engaging shorts with speed-up and music</p>
+                    </li>
+                    <li class="workflow-item" onclick="useWorkflow('silence')">
+                        <h3>🔇 Remove Silence</h3>
+                        <p>Cut out silent pauses from speech videos using AI detection</p>
+                    </li>
+                    <li class="workflow-item" onclick="useWorkflow('music')">
+                        <h3>🎵 Add Background Music</h3>
+                        <p>Mix background music with your video at perfect levels</p>
+                    </li>
+                    <li class="workflow-item" onclick="useWorkflow('vertical')">
+                        <h3>📐 Vertical Format</h3>
+                        <p>Convert landscape videos to 9:16 for Shorts/Reels/TikTok</p>
+                    </li>
                 </ul>
+                
                 <h2 style="margin-top: 30px;">🛠️ Available Tools</h2>
                 <div class="tool-grid" id="toolGrid"></div>
             </div>
         </div>
-        <div class="card" style="margin-top: 30px;">
-            <h2>📁 File Upload</h2>
+        
+        <div class="card upload-section">
+            <h2>📁 File Management</h2>
             <div class="upload-zone" id="uploadZone">
-                <p>📂 Drag & drop video/audio files here or click to browse</p>
+                <p style="font-size: 3em; margin-bottom: 15px;">📂</p>
+                <p><strong>Drag & drop</strong> video/audio files here</p>
+                <p style="color: var(--text-muted); font-size: 0.9em; margin-top: 10px;">or click to browse from your computer</p>
                 <input type="file" id="fileInput" style="display:none" accept="video/*,audio/*" multiple>
             </div>
-            <div id="uploadStatus"></div>
+            
+            <div class="file-info" id="fileInfo">
+                <div class="file-card">
+                    <h5>🎬 Video File</h5>
+                    <p id="videoFilePath">Not uploaded</p>
+                    <p class="default">Default: data/input/input_video.mp4</p>
+                </div>
+                <div class="file-card">
+                    <h5>🎵 Audio File</h5>
+                    <p id="audioFilePath">Not uploaded</p>
+                    <p class="default">Default: data/input/input_audio.mp4</p>
+                </div>
+                <div class="file-card">
+                    <h5>📁 Output Directory</h5>
+                    <p>data/output/</p>
+                    <p class="default">All processed videos saved here</p>
+                </div>
+                <div class="file-card">
+                    <h5>⏳ Temp Directory</h5>
+                    <p>data/temp/</p>
+                    <p class="default">Temporary processing files</p>
+                </div>
+            </div>
+            
+            <div class="upload-status" id="uploadStatus"></div>
         </div>
-        <footer><p>Antigenic Video Editor v1.0.0 | Built with ❤️ for creators</p></footer>
+        
+        <footer>
+            <p>Antigenic Video Editor v2.0.0 | Professional AI Video Editing | Built with ❤️ for creators</p>
+        </footer>
     </div>
     <script>
         const API_BASE = '/api';
+        
+        // Default file paths
+        const DEFAULT_VIDEO_PATH = 'data/input/input_video.mp4';
+        const DEFAULT_AUDIO_PATH = 'data/input/input_audio.mp4';
+        const OUTPUT_DIR = 'data/output/';
+        const TEMP_DIR = 'data/temp/';
+        
+        // State management
+        window.uploadedFiles = { video: null, audio: null };
+        window.isProcessing = false;
+        
         async function loadTools() {
             try {
                 const response = await fetch(`${API_BASE}/tools`);
                 const data = await response.json();
-                document.getElementById('toolGrid').innerHTML = data.tools.map(tool => 
+                document.getElementById('toolGrid').innerHTML = data.tools.map(tool =>
                     `<div class="tool-card"><h4>${tool.name}</h4><p>${tool.description}</p></div>`
                 ).join('');
             } catch (error) { console.error('Failed to load tools:', error); }
         }
+        
+        function useWorkflow(workflowType) {
+            const messages = {
+                'shorts': 'Create shorts from my long video',
+                'silence': 'Remove silence from my video',
+                'music': 'Add background music to my video',
+                'vertical': 'Convert my video to vertical format'
+            };
+            const input = document.getElementById('chatInput');
+            input.value = messages[workflowType] || '';
+            input.focus();
+            if (window.uploadedFiles.video || window.uploadedFiles.audio) {
+                sendMessage();
+            }
+        }
+        
         async function sendMessage() {
+            if (window.isProcessing) return;
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
             if (!message) return;
+            
             addMessage(message, 'user');
             input.value = '';
             
-            // Get context from uploaded files
-            const context = {};
-            const lastUploadedFile = window.lastUploadedFile;
-            if (lastUploadedFile) {
-                if (lastUploadedFile.type.startsWith('video/')) {
-                    context.video_path = lastUploadedFile.filepath;
-                } else if (lastUploadedFile.type.startsWith('audio/')) {
-                    context.audio_path = lastUploadedFile.filepath;
-                }
-            }
+            showProgress(0, 'Processing your request...');
+            window.isProcessing = true;
+            document.getElementById('sendBtn').disabled = true;
+            
+            const context = {
+                video_path: window.uploadedFiles.video?.filepath || DEFAULT_VIDEO_PATH,
+                audio_path: window.uploadedFiles.audio?.filepath || DEFAULT_AUDIO_PATH,
+                output_dir: OUTPUT_DIR,
+                temp_dir: TEMP_DIR
+            };
             
             try {
                 const response = await fetch(`${API_BASE}/agent/chat`, {
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({message, context})
                 });
+                
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    if (progress > 90) progress = 90;
+                    showProgress(progress, 'Processing...');
+                }, 500);
+                
                 const data = await response.json();
+                clearInterval(progressInterval);
+                showProgress(100, 'Complete!');
+                setTimeout(() => hideProgress(), 1000);
+                
                 addMessage(data.content, 'assistant');
                 
-                // Display output files prominently with video player
                 let outputFiles = [];
-                if (data.output_files && Array.isArray(data.output_files)) {
-                    outputFiles = data.output_files;
-                } else if (data.metadata?.result?.output_path) {
-                    outputFiles = [data.metadata.result.output_path];
-                } else if (data.metadata?.output_files) {
-                    outputFiles = Array.isArray(data.metadata.output_files) ? data.metadata.output_files : [data.metadata.output_files];
-                } else if (data.output_path) {
-                    outputFiles = [data.output_path];
-                }
+                if (data.output_files && Array.isArray(data.output_files)) outputFiles = data.output_files;
+                else if (data.metadata?.result?.output_path) outputFiles = [data.metadata.result.output_path];
+                else if (data.metadata?.output_files) outputFiles = Array.isArray(data.metadata.output_files) ? data.metadata.output_files : [data.metadata.output_files];
+                else if (data.output_path) outputFiles = [data.output_path];
                 
-                // Filter out null/undefined and display
                 outputFiles = outputFiles.filter(f => f);
-                if (outputFiles.length > 0) {
-                    outputFiles.forEach(filePath => {
-                        // Check if it's a video file
-                        if (filePath.endsWith('.mp4') || filePath.endsWith('.webm') || filePath.endsWith('.mov')) {
-                            displayVideoResult(filePath);
-                        } else {
-                            addMessage(`📁 ${filePath}`, 'system');
-                        }
-                    });
-                }
-            } catch (error) { 
-                addMessage('Error: Could not connect to server', 'system'); 
+                outputFiles.forEach(filePath => {
+                    if (filePath.endsWith('.mp4') || filePath.endsWith('.webm') || filePath.endsWith('.mov')) {
+                        displayVideoPlayer(filePath);
+                    } else {
+                        addMessage(`📁 Output: ${filePath}`, 'system');
+                    }
+                });
+            } catch (error) {
+                hideProgress();
+                addMessage('❌ Error: Could not connect to server', 'system');
                 console.error(error);
+            } finally {
+                window.isProcessing = false;
+                document.getElementById('sendBtn').disabled = false;
             }
         }
+        
+        function showProgress(percent, text) {
+            const container = document.getElementById('progressContainer');
+            const fill = document.getElementById('progressFill');
+            const textEl = document.getElementById('progressText');
+            container.classList.add('active');
+            fill.style.width = percent + '%';
+            textEl.textContent = text;
+        }
+        
+        function hideProgress() {
+            document.getElementById('progressContainer').classList.remove('active');
+        }
+        
         function addMessage(content, role) {
             const container = document.getElementById('chatContainer');
             const div = document.createElement('div');
             div.className = `message ${role}`;
-            // If content contains HTML (like file lists), use innerHTML, otherwise textContent
-            if (content.includes('<')) {
-                div.innerHTML = content;
-            } else {
-                div.textContent = content;
-            }
+            div.innerHTML = content.includes('<') ? content : content;
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
         }
         
-        // Display video result in player
-        function displayVideoResult(filePath) {
+        function displayVideoPlayer(filePath) {
             const container = document.getElementById('chatContainer');
             const div = document.createElement('div');
-            div.className = 'message system';
+            div.className = 'message assistant';
             div.style.maxWidth = '100%';
             
-            // Convert file path to URL-friendly format
             let videoUrl = filePath;
-            if (filePath.startsWith('data/output/')) {
-                videoUrl = '/' + filePath;
-            } else if (filePath.startsWith('data/temp/')) {
-                videoUrl = '/' + filePath;
-            } else if (!filePath.startsWith('/')) {
-                // Assume it's in output folder
-                videoUrl = '/data/output/' + filePath.split('/').pop();
-            }
+            if (!filePath.startsWith('/') && !filePath.startsWith('http')) videoUrl = '/' + filePath;
             
             const fileName = filePath.split('/').pop();
             div.innerHTML = `
-                <div style="margin-top: 10px;">
-                    <p style="color: #00ff88; margin-bottom: 10px;">✅ Video Ready: ${fileName}</p>
-                    <video controls style="max-width: 100%; max-height: 400px; border-radius: 8px;">
-                        <source src="${videoUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <div style="margin-top: 8px;">
-                        <a href="${videoUrl}" download style="color: #00d9ff; text-decoration: none;">⬇️ Download Video</a>
+                <div class="video-player-container">
+                    <div class="video-wrapper">
+                        <video controls preload="metadata">
+                            <source src="${videoUrl}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
                     </div>
-                </div>
-            `;
+                    <div class="video-info">
+                        <h4>✅ ${fileName}</h4>
+                        <a href="${videoUrl}" download class="download-btn">⬇️ Download</a>
+                    </div>
+                </div>`;
+            
             container.appendChild(div);
             container.scrollTop = container.scrollHeight;
+            
+            const videoEl = div.querySelector('video');
+            if (videoEl) {
+                videoEl.addEventListener('loadedmetadata', () => {
+                    const duration = videoEl.duration;
+                    const minutes = Math.floor(duration / 60);
+                    const seconds = Math.floor(duration % 60);
+                    const timeSpan = document.createElement('span');
+                    timeSpan.style.color = 'var(--text-secondary)';
+                    timeSpan.style.fontSize = '0.9em';
+                    timeSpan.textContent = `Duration: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                    const infoDiv = div.querySelector('.video-info');
+                    infoDiv.insertBefore(timeSpan, infoDiv.querySelector('.download-btn'));
+                });
+            }
         }
+        
         const uploadZone = document.getElementById('uploadZone');
         const fileInput = document.getElementById('fileInput');
+        
         uploadZone.addEventListener('click', () => fileInput.click());
         uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
         uploadZone.addEventListener('dragleave', () => { uploadZone.classList.remove('dragover'); });
-        uploadZone.addEventListener('drop', (e) => {
-            e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files);
-        });
+        uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
         fileInput.addEventListener('change', (e) => { handleFiles(e.target.files); });
         
-        // Store last uploaded file info for context
         async function handleFiles(files) {
+            const statusDiv = document.getElementById('uploadStatus');
             for (let file of files) {
-                const formData = new FormData(); 
+                const formData = new FormData();
                 formData.append('file', file);
                 try {
-                    const response = await fetch(`${API_BASE}/upload`, { 
-                        method: 'POST', 
-                        body: formData 
-                    });
+                    const response = await fetch(`${API_BASE}/upload`, { method: 'POST', body: formData });
                     const data = await response.json();
                     if (data.success) {
-                        document.getElementById('uploadStatus').innerHTML += `<p style="color:#00ff88">✓ Uploaded: ${data.filename}</p>`;
-                        // Store for context in chat
-                        window.lastUploadedFile = {
-                            type: file.type,
-                            filepath: data.filepath,
-                            filename: data.filename
-                        };
-                    }
+                        if (file.type.startsWith('video/')) {
+                            window.uploadedFiles.video = { type: file.type, filepath: data.filepath, filename: data.filename };
+                            document.getElementById('videoFilePath').textContent = data.filepath;
+                            document.getElementById('videoFilePath').style.color = 'var(--success)';
+                        } else if (file.type.startsWith('audio/')) {
+                            window.uploadedFiles.audio = { type: file.type, filepath: data.filepath, filename: data.filename };
+                            document.getElementById('audioFilePath').textContent = data.filepath;
+                            document.getElementById('audioFilePath').style.color = 'var(--success)';
+                        }
+                        statusDiv.innerHTML += `<p class="success">✓ Uploaded: ${data.filename}</p>`;
+                    } else throw new Error('Upload failed');
                 } catch (error) {
-                    document.getElementById('uploadStatus').innerHTML += `<p style="color:#ff4444">✗ Failed: ${file.name}</p>`;
+                    statusDiv.innerHTML += `<p class="error">✗ Failed: ${file.name}</p>`;
+                    console.error('Upload error:', error);
                 }
             }
         }
+        
         loadTools();
     </script>
 </body>
