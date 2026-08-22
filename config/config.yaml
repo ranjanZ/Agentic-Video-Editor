@@ -1,0 +1,42 @@
+# Video Processing Configuration
+input_video_path: "/home/zhedge/2026-08-21 21-34-39.mp4"
+input_audio_path: "/home/zhedge/Music/back_music/back_copyright_free/kontraa-gph-nepalese-hiphop-music-584223.mp3"
+output_dir: "/home/zhedge/focus/video_edit/video_editor/data/output/"
+
+# Segment settings
+max_segment_duration_minutes: 20
+target_output_duration_seconds: 29
+
+# Audio settings
+audio_volume: 0.4
+keep_original_audio: false
+audio_fade_in_seconds: 1.0
+audio_fade_out_seconds: 1.0
+
+# ── Audio start position (NEW) ──
+# Fixed mode: every segment's music starts at this second of the song.
+# (If the window runs past the song's end, it wraps around / loops seamlessly.)
+audio_start_seconds: 15
+
+# Random mode: true = each segment picks a random start position in the song.
+# Overrides audio_start_seconds when enabled.
+audio_random_start: false
+
+# Seed for reproducible random picks. Set to null for different picks every run.
+audio_random_seed: 42
+
+# Output settings
+output_fps: 30
+codec: "libx264"
+audio_codec: "aac"
+threads: 8
+preset: "fast"
+output_format: "mp4"
+
+# Progress bar: true = show bar, false = quiet
+show_progress_bar: true
+
+# ── Vertical Mode (YouTube Shorts / Instagram Reels / Facebook Reels) ──
+vertical_mode: true
+vertical_width: 1080
+vertical_height: 1920
