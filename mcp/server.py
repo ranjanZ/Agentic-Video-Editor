@@ -89,6 +89,18 @@ class MCPServer:
                 "available_tools": self.registry.get_tool_names()
             }
         
+        # Validate required parameters from schema
+        required_params = tool.input_schema.get("required", [])
+        missing_params = [param for param in required_params if param not in arguments or not arguments[param]]
+        
+        if missing_params:
+            return {
+                "success": False,
+                "error": f"Missing required parameters: {', '.join(missing_params)}",
+                "tool": tool_name,
+                "timestamp": datetime.now().isoformat()
+            }
+        
         try:
             result = tool.execute(**arguments)
             return {
@@ -97,6 +109,26 @@ class MCPServer:
                 "message": result.message,
                 "metadata": result.metadata,
                 "error": result.error,
+                "timestamp": datetime.now().isoformat()
+            }
+        except TypeError as e:
+            # Handle missing positional arguments gracefully
+            error_msg = str(e)
+            if "missing" in error_msg and "required positional argument" in error_msg:
+                # Extract the missing parameter name from error message
+                import re
+                match = re.search(r"'(\w+)'", error_msg)
+                missing_param = match.group(1) if match else "unknown"
+                return {
+                    "success": False,
+                    "error": f"Missing required parameter: {missing_param}",
+                    "tool": tool_name,
+                    "timestamp": datetime.now().isoformat()
+                }
+            return {
+                "success": False,
+                "error": error_msg,
+                "tool": tool_name,
                 "timestamp": datetime.now().isoformat()
             }
         except Exception as e:
