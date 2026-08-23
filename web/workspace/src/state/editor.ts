@@ -4,7 +4,6 @@ import {
   Caption,
   Clip,
   FPS,
-  SOURCE_DURATION,
   detectSilence,
   fmtSec,
   fmtTC,
@@ -63,6 +62,13 @@ export interface AgentResult {
   };
 }
 
+export interface MediaSource {
+  id: string;
+  path: string;
+  type: "audio" | "video";
+  duration: number;
+}
+
 interface State {
   clips: Clip[];
   aspect: Aspect;
@@ -72,6 +78,8 @@ interface State {
 }
 
 type Action =
+  | { type: "set-duration"; duration: number }
+  | { type: "add-source-clip"; sourceId: string; duration: number }
   | { type: "split"; at: number }
   | { type: "remove"; id: string }
   | { type: "trim"; id: string; side: "l" | "r"; delta: number; commit?: boolean }
@@ -80,7 +88,7 @@ type Action =
   | { type: "undo" }
   | { type: "redo" };
 
-const initialClips = (): Clip[] => [{ id: nextId(), src: 0, dur: SOURCE_DURATION }];
+const initialClips = (): Clip[] => [{ id: nextId(), sourceId: "video-default", src: 0, dur: 0.1 }];
 
 const init = (): State => ({
   clips: initialClips(),
@@ -95,6 +103,20 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
+    case "set-duration": {
+      const duration = Math.max(0.1, action.duration);
+      const clips = state.clips.length === 1 && state.clips[0].src === 0 && state.clips[0].dur <= 0.1
+        ? [{ ...state.clips[0], dur: duration }]
+        : state.clips;
+      return { ...state, clips };
+    }
+    case "add-source-clip": {
+      const duration = Math.max(0.1, action.duration);
+      const incoming = { id: nextId(), sourceId: action.sourceId, src: 0, dur: duration };
+      const isPlaceholder = state.clips.length === 1 && state.clips[0].dur <= 0.1;
+      const clips = isPlaceholder ? [incoming] : [...state.clips, incoming];
+      return { ...state, clips, past: [...state.past, snap(state)].slice(-60), future: [] };
+    }
     case "split": {
       const { at } = action;
       let acc = 0;
@@ -127,7 +149,7 @@ function reducer(state: State, action: Action): State {
           const d = clamp(action.delta, -c.src, c.dur - 0.25);
           return { ...c, src: c.src + d, dur: c.dur - d };
         }
-        const d = clamp(action.delta, -(c.dur - 0.25), SOURCE_DURATION - c.src - c.dur);
+        const d = clamp(action.delta, -(c.dur - 0.25), Number.POSITIVE_INFINITY);
         return { ...c, dur: c.dur + d };
       });
       const history =
@@ -185,7 +207,41 @@ export function useEditor() {
   const [jobs, setJobs] = useState<Partial<Record<ToolId, JobState>>>({});
   const [audioPath, setAudioPath] = useState(DEFAULT_AUDIO_PATH);
   const [videoPath, setVideoPath] = useState(DEFAULT_VIDEO_PATH);
+  const [sourceDuration, setSourceDuration] = useState(0);
+  const [mediaSources, setMediaSources] = useState<MediaSource[]>([
+    { id: "video-default", path: DEFAULT_VIDEO_PATH, type: "video", duration: 0 },
+    { id: "audio-default", path: DEFAULT_AUDIO_PATH, type: "audio", duration: 0 },
+  ]);
   const [outputVideoPath, setOutputVideoPath] = useState<string | null>(null);
+
+  const toMediaUrl = (path: string) => {
+    const dataPath = path.replace(/^.*?data[\\/]/, "").replace(/\\/g, "/");
+    return `/data/${dataPath}`;
+  };
+
+  useEffect(() => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        setSourceDuration(video.duration);
+        setMediaSources((sources) => sources.map((source) => source.path === videoPath ? { ...source, duration: video.duration } : source));
+        dispatch({ type: "set-duration", duration: video.duration });
+      }
+    };
+    video.src = /\\.(mp4|webm|mov)$/i.test(videoPath)
+      ? toMediaUrl(videoPath)
+      : `/api/media/preview/${encodeURIComponent(videoPath.split(/[\\\\/]/).pop() || "source.mkv")}`;
+    return () => { video.src = ""; };
+  }, [videoPath]);
+
+  const addMediaSource = useCallback((path: string, type: "audio" | "video", duration = 0) => {
+    const source = { id: `${type}-${Date.now()}`, path, type, duration };
+    setMediaSources((sources) => [...sources, source]);
+    if (type === "video") setVideoPath(path);
+    else setAudioPath(path);
+    if (type === "video" && duration > 0) dispatch({ type: "add-source-clip", sourceId: source.id, duration });
+  }, []);
 
   const totalDuration = useMemo(
     () => state.clips.reduce((a, c) => a + c.dur, 0),
@@ -210,13 +266,15 @@ export function useEditor() {
     setLogs((ls) => [...ls.slice(-140), { id: ++logId, time: stamp(), level, text }]);
   }, []);
 
-  /* boot log — documents the two fixed failures */
+  const addSourceToTimeline = useCallback((source: MediaSource) => {
+    if (source.type !== "video" || source.duration <= 0) return;
+    dispatch({ type: "add-source-clip", sourceId: source.id, duration: source.duration });
+    log("tool", `source added · ${source.path} · ${fmtSec(source.duration)} appended to V1`);
+  }, [log]);
+
+  /* boot log */
   useEffect(() => {
-    log("err", "prev session · transcribe failed → Missing required parameters: input_path");
-    log("ok", `fix · input_path default bound → ${DEFAULT_AUDIO_PATH}`);
-    log("err", "prev session · video_split failed → audio file not found: data/input/input_audio.mp4");
-    log("ok", "fix · audio extension corrected .mp4 → .mp3, path re-pointed");
-    log("info", `project loaded · ${DEFAULT_VIDEO_PATH} · ${SOURCE_DURATION.toFixed(1)}s · ${FPS} fps`);
+    log("info", `project loaded · ${DEFAULT_VIDEO_PATH} · duration pending · ${FPS} fps`);
     log("info", "preview engine online — cut iteratively, every tool is reversible");
   }, [log]);
 
@@ -391,7 +449,7 @@ export function useEditor() {
             [750, "cutting + ripple delete…"],
           ],
           () => {
-            const clips = talkClips();
+            const clips = talkClips(0.16, sourceDuration || undefined);
             const kept = clips.reduce((a, c) => a + c.dur, 0);
             dispatch({ type: "apply", snapshot: { clips, aspect: state.aspect, captions: state.captions } });
             pushVersion("silence removed", { clips, aspect: state.aspect, captions: state.captions });
@@ -444,7 +502,7 @@ export function useEditor() {
         );
       }
     },
-    [busy, audioPath, videoPath, state.clips, state.aspect, state.captions, log, runJob, pushVersion],
+    [busy, audioPath, videoPath, sourceDuration, state.clips, state.aspect, state.captions, log, runJob, pushVersion],
   );
 
   const resetProject = useCallback(() => {
@@ -454,7 +512,7 @@ export function useEditor() {
     });
     setPlayhead(0);
     setSelected(null);
-    log("info", "project reset · full 48s source back on the timeline");
+    log("info", "project reset · active source restored on the timeline");
   }, [log]);
 
   const applyAgentResult = useCallback(
@@ -511,7 +569,7 @@ export function useEditor() {
     const payload = {
       app: "FrameForge v2.1",
       project: "demo_reel.ffproj",
-      source: { video: videoPath, audio: audioPath, fps: FPS, duration_s: SOURCE_DURATION },
+      source: { video: videoPath, audio: audioPath, fps: FPS, duration_s: sourceDuration },
       output: { aspect: state.aspect, duration_s: +totalDuration.toFixed(3) },
       edits: edl,
       captions: state.captions?.map((c) => ({ ...c, start: +c.start.toFixed(2), end: +c.end.toFixed(2) })) ?? [],
@@ -563,6 +621,10 @@ export function useEditor() {
     setAudioPath,
     videoPath,
     setVideoPath,
+    sourceDuration,
+    mediaSources,
+    addMediaSource,
+    addSourceToTimeline,
     outputVideoPath,
     setOutputVideoPath,
     totalDuration,

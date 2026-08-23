@@ -4,7 +4,6 @@ import {
   PEAKS,
   PEAK_STEP,
   SILENCE_THRESHOLD,
-  SOURCE_DURATION,
   amplitude,
   drawContent,
   fmtTC,
@@ -94,7 +93,7 @@ const ClipBlock = memo(function ClipBlock({
         onSelect(clip.id);
         onScrub(e);
       }}
-      title={`src ${fmtTC(clip.src)} → ${fmtTC(clip.src + clip.dur)} · ${clip.dur.toFixed(2)}s`}
+      title={`${clip.sourceId || "source"} · src ${fmtTC(clip.src)} → ${fmtTC(clip.src + clip.dur)} · ${clip.dur.toFixed(2)}s`}
     >
       <div className="flex h-full">
         {thumbs.map((th) => (
@@ -442,7 +441,7 @@ export default function Timeline({ ed }: { ed: Editor }) {
           drag clip edges to trim · click a clip to arm <kbd>Del</kbd> · <kbd>S</kbd> splits under the playhead
         </span>
         <span className="ml-auto hidden lg:inline">
-          silence floor <span className="text-coral">-32 dB</span> · media ends {fmtTC(SOURCE_DURATION)}
+                  silence floor <span className="text-coral">-32 dB</span> · source {ed.sourceDuration > 0 ? `ends ${fmtTC(ed.sourceDuration)}` : "duration loading"}
         </span>
       </div>
     </section>

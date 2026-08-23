@@ -38,6 +38,7 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
           context: {
             video_path: ed.videoPath,
             audio_path: ed.audioPath,
+            media_sources: ed.mediaSources.map(({ path, type, duration }) => ({ path, type, duration })),
             output_dir: "data/output",
           },
         }),

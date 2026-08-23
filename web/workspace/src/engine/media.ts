@@ -14,6 +14,7 @@ export type Aspect = "16:9" | "9:16";
 
 export interface Clip {
   id: string;
+  sourceId?: string;
   src: number; // source in-point (s)
   dur: number; // duration (s)
 }
@@ -119,13 +120,16 @@ export function detectSilence(minLen = 0.65): Array<[number, number]> {
 }
 
 /** Clips that keep only the talking parts (with a small pad). */
-export function talkClips(pad = 0.16): Clip[] {
+export function talkClips(pad = 0.16, maxDuration = SOURCE_DURATION): Clip[] {
   const clips: Clip[] = [];
   TALK_REGIONS.forEach(([a, b], i) => {
+    const start = Math.max(0, a - pad);
+    const end = Math.min(maxDuration, b + pad);
+    if (end <= start) return;
     clips.push({
       id: `talk-${i}`,
-      src: Math.max(0, a - pad),
-      dur: b - a + pad * 2,
+      src: start,
+      dur: end - start,
     });
   });
   return clips.filter((c) => c.dur > 0.1);

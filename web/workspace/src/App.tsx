@@ -156,8 +156,7 @@ export default function App() {
         <span><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd> shuttle</span>
         <span><kbd>C</kbd> captions</span>
         <span className="ml-auto text-faint">
-          sources · <span className="text-cyan/80">data/input/input_audio.mp3</span> ·{" "}
-          <span className="text-amber/80">data/input/input_video.mkv</span>
+          sources · {ed.mediaSources.length} loaded · {ed.sourceDuration > 0 ? `${ed.sourceDuration.toFixed(1)}s active video` : "reading metadata"}
         </span>
       </footer>
 

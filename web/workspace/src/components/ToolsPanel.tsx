@@ -28,8 +28,13 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || "Upload failed");
     const path = data.path as string;
-    if (AUDIO_RE.test(path)) ed.setAudioPath(path);
-    if (VIDEO_RE.test(path)) ed.setVideoPath(path);
+    const type = AUDIO_RE.test(path) ? "audio" : VIDEO_RE.test(path) ? "video" : null;
+    if (!type) throw new Error("Unsupported media format");
+    const media = document.createElement(type);
+    media.preload = "metadata";
+    media.onloadedmetadata = () => ed.addMediaSource(path, type, Number.isFinite(media.duration) ? media.duration : 0);
+    media.onerror = () => ed.addMediaSource(path, type);
+    media.src = `/data/input/${encodeURIComponent(path.split(/[\\/]/).pop() || "")}`;
   };
 
   const tools: Array<{
@@ -92,7 +97,30 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
     <div className="flex flex-col gap-4 h-full min-h-0 overflow-y-auto pr-0.5">
       {/* sources */}
       <div className="panel p-3.5 anim-rise" style={{ animationDelay: "40ms" }}>
-        <SectionHead icon={<IFilm className="w-3.5 h-3.5" />} title="Media sources" aside="defaults fixed" />
+        <SectionHead icon={<IFilm className="w-3.5 h-3.5" />} title="Media sources" aside={`${ed.mediaSources.length} loaded`} />
+        <div className="mb-3 flex flex-col gap-1.5">
+          {ed.mediaSources.map((source) => (
+            <button
+              key={source.id}
+              className="flex items-center gap-2 rounded border border-line bg-bg1/70 px-2 py-1.5 text-left hover:border-line2"
+              onClick={() => source.type === "video" ? ed.setVideoPath(source.path) : ed.setAudioPath(source.path)}
+              title="Use this source for the active tool"
+            >
+              <span className={source.type === "video" ? "text-amber" : "text-cyan"}>{source.type === "video" ? "V" : "A"}</span>
+              <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-ink/80">{source.path.split(/[\\/]/).pop()}</span>
+              <span className="font-mono text-[9px] text-faint">{source.duration > 0 ? `${source.duration.toFixed(1)}s` : "metadata"}</span>
+              {source.type === "video" && source.path === ed.videoPath && <span className="text-[9px] text-mint">active</span>}
+              {source.type === "video" && source.duration > 0 && (
+                <span
+                  className="font-mono text-[9px] text-amber"
+                  onClick={(event) => { event.stopPropagation(); ed.addSourceToTimeline(source); }}
+                >
+                  + V1
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
         <label className="block mb-2">
           <span className="flex items-center justify-between text-[10.5px] font-display font-semibold tracking-wide text-dim mb-1">
             AUDIO <span className={`font-mono text-[9.5px] ${audioValid ? "text-mint" : "text-coral"}`}>{audioValid ? "resolved" : "bad ext"}</span>
@@ -127,10 +155,8 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
           />
         </label>
         <p className="mt-2.5 flex gap-1.5 items-start text-[10px] leading-relaxed text-faint">
-          <IAlert className="w-3 h-3 shrink-0 mt-0.5 text-amber" />
-          Earlier runs failed on <span className="font-mono text-coral/90">input_audio.mp4</span> and a missing{" "}
-          <span className="font-mono text-coral/90">input_path</span>. Tools now bind{" "}
-          <span className="font-mono text-mint/90">.mp3</span> audio + explicit paths automatically.
+          <ICheck className="w-3 h-3 shrink-0 mt-0.5 text-mint" />
+          Active sources are passed to every tool. Add more files to build a multi-source sequence.
         </p>
       </div>
 

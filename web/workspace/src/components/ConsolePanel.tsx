@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { SOURCE_DURATION } from "../engine/media";
 import { Editor, LogLevel } from "../state/editor";
 import { IDownload, IWave } from "./icons";
 
@@ -18,7 +17,7 @@ export default function ConsolePanel({ ed }: { ed: Editor }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [ed.logs.length]);
 
-  const removed = SOURCE_DURATION - ed.totalDuration;
+  const removed = Math.max(0, ed.sourceDuration - ed.totalDuration);
   const stats: Array<[string, string, string]> = [
     ["timeline", `${ed.totalDuration.toFixed(2)}s`, "text-amber"],
     ["cut away", `${removed.toFixed(2)}s`, removed > 0.01 ? "text-coral" : "text-faint"],
