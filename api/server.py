@@ -31,13 +31,13 @@ def create_app(config=None):
     """Create and configure the Flask application."""
     
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    app = Flask(__name__, 
-                static_folder=os.path.join(base_dir, 'web', 'static'),
-                template_folder=os.path.join(base_dir, 'web', 'templates'))
+    app = Flask(__name__)
     CORS(app)
     
-    # Workspace folder for modular JS files
+    # Workspace folder serves as both static and template folder
     app.workspace_folder = os.path.join(base_dir, 'web', 'workspace')
+    app.static_folder = app.workspace_folder
+    app.template_folder = app.workspace_folder
     
     # Configuration - use absolute paths
     app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'data', 'input')
@@ -87,18 +87,20 @@ def create_app(config=None):
     
     @app.route('/')
     def index():
-        """Serve the main web interface from templates folder."""
-        return send_from_directory(app.template_folder, 'index.html')
+        """Serve the workspace chat interface as the main UI."""
+        return send_from_directory(app.workspace_folder, 'index.html')
     
     @app.route('/workspace/')
     def workspace_index():
-        """Serve the workspace chat interface."""
+        """Alias for the workspace chat interface."""
         return send_from_directory(app.workspace_folder, 'index.html')
     
-    @app.route('/workspace/<path:filename>')
-    def serve_workspace_files(filename):
-        """Serve workspace JavaScript modules."""
-        return send_from_directory(app.workspace_folder, filename)
+    @app.route('/<path:filename>')
+    def serve_workspace_static_files(filename):
+        """Serve workspace static files (JS, CSS)."""
+        if filename.endswith('.js') or filename.endswith('.css'):
+            return send_from_directory(app.workspace_folder, filename)
+        return jsonify({'error': 'File not found'}), 404
     
     @app.route('/api/health', methods=['GET'])
     def health_check():
