@@ -44,8 +44,7 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The agent could not respond.");
-      const output = data.output_files?.[0] || data.output_path;
-      if (output) ed.setOutputVideoPath(output);
+      ed.applyAgentResult(data);
       setMessages((current) => [...current, { role: "assistant", content: data.content || "Done." }]);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "The agent could not respond.");

@@ -48,6 +48,15 @@ export interface JobState {
   status: string;
 }
 
+export interface AgentResult {
+  content?: string;
+  output_files?: string[];
+  output_path?: string;
+  metadata?: {
+    tool_results?: Array<{ output_path?: string; metadata?: { aspect_ratio?: string } }>;
+  };
+}
+
 interface State {
   clips: Clip[];
   aspect: Aspect;
@@ -402,8 +411,10 @@ export function useEditor() {
             pushVersion(target === "9:16" ? "vertical 9:16" : "landscape 16:9", snapshot);
             if (target === "9:16") {
               const out = videoPath.replace(/(\.\w+)?$/, "_vertical_9x16.mkv").replace("data/input", "data/output");
+              setOutputVideoPath(out);
               log("ok", `vertical conform ready · output → ${out}`);
             } else {
+              setOutputVideoPath(null);
               log("ok", "conformed back to 16:9 · full frame restored on program out");
             }
           },
@@ -440,6 +451,24 @@ export function useEditor() {
     log("info", "project reset · full 48s source back on the timeline");
   }, [log]);
 
+  const applyAgentResult = useCallback(
+    (result: AgentResult) => {
+      const output = result.output_files?.find(Boolean) || result.output_path;
+      if (!output) return;
+      setOutputVideoPath(output);
+      const isVertical =
+        /vertical|9x16/i.test(output) ||
+        result.metadata?.tool_results?.some((tool) => tool.metadata?.aspect_ratio === "9:16");
+      if (isVertical && state.aspect !== "9:16") {
+        const snapshot: Snapshot = { clips: state.clips, aspect: "9:16", captions: state.captions };
+        dispatch({ type: "apply", snapshot });
+        pushVersion("agent vertical conform", snapshot);
+      }
+      log("ok", `program out · ${output}`);
+    },
+    [state.aspect, state.clips, state.captions, pushVersion, log],
+  );
+
   /* ------------------------------ export ---------------------------- */
 
   const exportEDL = useCallback(() => {
@@ -473,6 +502,19 @@ export function useEditor() {
     URL.revokeObjectURL(url);
     log("ok", `export · EDL written → data/output/demo_reel_edl.json (${edl.length} events, ${fmtSec(totalDuration)})`);
   }, [state.clips, state.aspect, state.captions, audioPath, videoPath, totalDuration, log]);
+
+  const exportVideo = useCallback(() => {
+    if (!outputVideoPath) {
+      log("warn", "export · no rendered Program Out video is available yet");
+      return;
+    }
+    const dataPath = outputVideoPath.replace(/^.*?data[\\/]/, "").replace(/\\/g, "/");
+    const a = document.createElement("a");
+    a.href = `/data/${dataPath}`;
+    a.download = dataPath.split("/").pop() || "program_out.mp4";
+    a.click();
+    log("ok", `export · Program Out video downloaded → ${outputVideoPath}`);
+  }, [outputVideoPath, log]);
 
   return {
     // state
@@ -517,6 +559,8 @@ export function useEditor() {
     runTool,
     restoreVersion,
     resetProject,
+    applyAgentResult,
+    exportVideo,
     exportEDL,
   };
 }

@@ -121,8 +121,11 @@ export default function App() {
             <IRedo className="w-4 h-4" />
           </button>
           <div className="h-6 w-px bg-line" />
-          <button className="btn btn-amber" onClick={ed.exportEDL}>
+          <button className="btn btn-amber" onClick={ed.exportVideo} disabled={!ed.outputVideoPath} title="Download the rendered Program Out video">
             <IDownload className="w-4 h-4" /> Export
+          </button>
+          <button className="btn btn-ghost" onClick={ed.exportEDL} title="Download the edit decision list">
+            EDL
           </button>
         </div>
       </header>

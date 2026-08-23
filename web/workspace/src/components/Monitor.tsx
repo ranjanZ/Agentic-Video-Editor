@@ -66,10 +66,29 @@ export default function Monitor({ ed }: { ed: Editor }) {
     return `/data/${dataPath}`;
   };
   const outputUrl = ed.outputVideoPath ? toMediaUrl(ed.outputVideoPath) : null;
-  const browserPlayableSource = /\.(mp4|webm|mov)$/i.test(ed.videoPath);
-  const sourceUrl = browserPlayableSource
+  const sourceUrl = /\.(mp4|webm|mov)$/i.test(ed.videoPath)
     ? toMediaUrl(ed.videoPath)
     : `/api/media/preview/${encodeURIComponent(ed.videoPath.split(/[\\/]/).pop() || "source.mkv")}`;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onLoaded = () => {
+      video.currentTime = Math.min(ed.playhead, video.duration || ed.totalDuration);
+    };
+    video.addEventListener("loadedmetadata", onLoaded);
+    return () => video.removeEventListener("loadedmetadata", onLoaded);
+  }, [outputUrl, sourceUrl]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (Math.abs(video.currentTime - ed.playhead) > 0.08) {
+      video.currentTime = Math.min(ed.playhead, video.duration || ed.totalDuration);
+    }
+    if (ed.playing && video.paused) void video.play().catch(() => undefined);
+    if (!ed.playing && !video.paused) video.pause();
+  }, [ed.playing, ed.playhead, ed.totalDuration]);
 
   return (
     <section className="panel overflow-hidden anim-rise">
@@ -105,13 +124,19 @@ export default function Monitor({ ed }: { ed: Editor }) {
             maxWidth: vertical ? "none" : "100%",
           }}
         >
-          {outputUrl || browserPlayableSource ? (
+          {outputUrl || sourceUrl ? (
             <video
               ref={videoRef}
               src={outputUrl || sourceUrl}
               controls
               className="w-full h-full block rounded-md shadow-[0_0_60px_rgba(0,0,0,0.6)] object-contain bg-black"
               onTimeUpdate={(event) => ed.setPlayhead(event.currentTarget.currentTime)}
+              onPlay={() => {
+                if (!ed.playing) ed.togglePlay();
+              }}
+              onPause={() => {
+                if (ed.playing) ed.togglePlay();
+              }}
             />
           ) : (
             <canvas
