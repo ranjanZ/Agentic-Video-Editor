@@ -1,6 +1,6 @@
 # Antigenic Video Editor
 
-An AI-powered agentic video editing platform that combines automated video processing with intelligent agents for natural language control.
+An AI-powered agentic video editing platform that combines automated video processing with intelligent agents for natural language control. The system uses an MCP (Model Context Protocol) server architecture to expose video editing tools that can be called by AI agents.
 
 ## Features
 
@@ -14,12 +14,14 @@ An AI-powered agentic video editing platform that combines automated video proce
 
 ### Agentic Capabilities
 - **Natural Language Interface**: Describe what you want in plain English
+- **MCP Server**: Tools exposed as MCP-compatible endpoints for LLM agents
 - **Workflow Automation**: Pre-built workflows for common tasks
 - **Tool Orchestration**: Agent automatically chains multiple tools together
 - **Interactive Chat**: Get suggestions and confirmations before execution
 
 ### Web Interface
-- Modern, responsive UI
+- **Main Interface** (`/`): Full-featured UI with all capabilities
+- **Workspace Chat Interface** (`/workspace`): Modular chat-focused interface with separate JS modules
 - Drag-and-drop file upload
 - Real-time chat with AI agent
 - Workflow templates
@@ -59,7 +61,12 @@ antigenic-video-editor/
 ├── web/                     # Web interface
 │   ├── templates/
 │   │   └── index.html       # Main web UI
-│   └── static/              # Static assets
+│   ├── workspace/           # Modular chat interface
+│   │   ├── index.html       # Workspace chat UI
+│   │   ├── chat_agent.js    # Chat agent client module
+│   │   ├── video_processor.js # Video processing client module
+│   │   └── app.js           # Main application logic
+│   └── static/              # Static assets (CSS, images)
 │
 ├── config/                  # Configuration files
 │   └── default_config.yaml
@@ -89,24 +96,49 @@ pip install moviepy openai-whisper flask flask-cors pydub pyyaml
 
 ## Usage
 
-### Command Line (Legacy)
+### Prerequisites
 
+1. **Install Python dependencies:**
 ```bash
-# Process video with config
-python core/process_video.py config/default_config.yaml
-
-# Remove silence from video
-python core/video_silence_remover.py
+pip install -r requirements.txt
 ```
 
-### Web Interface
-
+2. **Install FFmpeg** (required for video processing):
 ```bash
-# Start the web server
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# macOS
+brew install ffmpeg
+
+# Windows
+# Download from https://ffmpeg.org/download.html
+```
+
+3. **Install Ollama and pull the LLM model** (for AI agent features):
+```bash
+# Install Ollama from https://ollama.ai
+ollama pull qwen2.5:1.5b-instruct-q4_K_M
+```
+
+### Running the Application
+
+#### Option 1: Main Web Interface
+```bash
 python -m api.server
 ```
-
 Then open http://localhost:5000 in your browser.
+
+#### Option 2: Workspace Chat Interface (Modular)
+```bash
+python -m api.server
+```
+Then open http://localhost:5000/workspace in your browser.
+
+The workspace interface provides a cleaner, modular architecture with separate JavaScript modules:
+- `chat_agent.js` - Handles communication with the AI agent
+- `video_processor.js` - Manages tool execution and file uploads
+- `app.js` - Main application logic integrating all modules
 
 ### API Endpoints
 
@@ -117,6 +149,8 @@ Then open http://localhost:5000 in your browser.
 - `GET /api/workflows` - List workflows
 - `POST /api/workflows/<name>` - Execute a workflow
 - `POST /api/upload` - Upload files
+- `GET /workspace/` - Access the modular chat interface
+- `GET /workspace/<filename>` - Access workspace JavaScript modules
 
 ### Example: Using the Agent
 
