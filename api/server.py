@@ -119,6 +119,11 @@ def create_app(config=None):
             return jsonify({'error': 'Invalid folder type'}), 400
         
         return send_from_directory(folder, filename)
+
+    @app.route('/favicon.ico')
+    def favicon():
+        """Avoid a noisy 404 when the browser requests the optional favicon."""
+        return '', 204
     
     @app.route('/api/tools', methods=['GET'])
     def list_tools():
