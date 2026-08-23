@@ -29,8 +29,8 @@ def create_app(config=None):
     app = Flask(__name__)
     CORS(app)
     
-    # Workspace folder serves as both static and template folder
-    app.workspace_folder = os.path.join(base_dir, 'web', 'workspace')
+    # Serve the compiled Vite app. Browsers cannot execute the source TSX files.
+    app.workspace_folder = os.path.join(base_dir, 'web', 'workspace', 'dist')
     app.static_folder = app.workspace_folder
     app.template_folder = app.workspace_folder
     
@@ -70,6 +70,11 @@ def create_app(config=None):
     def workspace_index():
         """Alias for the workspace chat interface."""
         return send_from_directory(app.workspace_folder, 'index.html')
+
+    @app.route('/favicon.ico')
+    def favicon():
+        """Avoid a noisy 404 when the browser requests the optional favicon."""
+        return '', 204
     
     @app.route('/<path:filename>')
     def serve_workspace_static_files(filename):

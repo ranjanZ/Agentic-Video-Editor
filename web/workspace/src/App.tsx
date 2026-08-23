@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Monitor from "./components/Monitor";
 import Timeline from "./components/Timeline";
 import ToolsPanel from "./components/ToolsPanel";
 import ConsolePanel from "./components/ConsolePanel";
+import ChatPanel from "./components/ChatPanel";
 import { useEditor } from "./state/editor";
 import { IDownload, IFilm, IRedo, IUndo } from "./components/icons";
 
@@ -18,6 +19,7 @@ function Logo() {
 
 export default function App() {
   const ed = useEditor();
+  const [chatOpen, setChatOpen] = useState(false);
 
   /* global shortcuts */
   useEffect(() => {
@@ -155,6 +157,16 @@ export default function App() {
           <span className="text-amber/80">data/input/input_video.mkv</span>
         </span>
       </footer>
+
+      {chatOpen && <ChatPanel ed={ed} onClose={() => setChatOpen(false)} />}
+      <button
+        className="fixed z-30 bottom-5 right-5 btn btn-amber shadow-xl"
+        onClick={() => setChatOpen((open) => !open)}
+        aria-label={chatOpen ? "Close agent chat" : "Open agent chat"}
+        title={chatOpen ? "Close agent chat" : "Open agent chat"}
+      >
+        {chatOpen ? "Close chat" : "Agent chat"}
+      </button>
     </div>
   );
 }
