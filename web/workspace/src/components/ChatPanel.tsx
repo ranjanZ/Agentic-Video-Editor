@@ -8,10 +8,9 @@ type Message = {
 
 type ChatPanelProps = {
   ed: Editor;
-  onClose: () => void;
 };
 
-export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
+export default function ChatPanel({ ed }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", content: "What would you like to change in this edit?" },
   ]);
@@ -39,6 +38,7 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
             video_path: ed.videoPath,
             audio_path: ed.audioPath,
             media_sources: ed.mediaSources.map(({ path, type, duration }) => ({ path, type, duration })),
+            tool_config: ed.toolConfig,
             output_dir: "data/output",
           },
         }),
@@ -55,15 +55,13 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
   };
 
   return (
-    <section className="fixed z-30 bottom-20 right-5 w-[min(370px,calc(100vw-24px))] h-[min(520px,calc(100vh-112px))] panel flex flex-col overflow-hidden shadow-2xl">
+    <section className="panel flex-1 min-h-0 flex flex-col overflow-hidden">
       <header className="flex items-center justify-between gap-3 px-4 py-3 border-b border-line bg-bg2/90">
         <div>
           <div className="panel-title text-amber">agent chat</div>
           <div className="text-[11px] text-faint mt-1">FrameForge assistant</div>
         </div>
-        <button className="btn btn-ghost btn-icon text-lg leading-none" onClick={onClose} aria-label="Close chat" title="Close chat">
-          x
-        </button>
+        <span className="chip !text-mint !border-mint/30">online</span>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">

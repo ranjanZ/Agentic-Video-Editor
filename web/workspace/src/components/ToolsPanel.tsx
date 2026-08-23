@@ -20,6 +20,9 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
   const audioValid = AUDIO_RE.test(ed.audioPath.trim());
   const videoValid = VIDEO_RE.test(ed.videoPath.trim());
   const gapCount = useMemo(() => detectSilence().length, []);
+  const updateConfig = (tool: "silence" | "vertical" | "transcribe", values: Record<string, unknown>) => {
+    ed.setToolConfig((current) => ({ ...current, [tool]: { ...current[tool], ...values } }));
+  };
 
   const upload = async (file: File) => {
     const form = new FormData();
@@ -56,7 +59,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
       icon: <IWave className="w-4 h-4" />,
       color: "text-amber",
       border: "border-amber/40 bg-amber/10 hover:bg-amber/20",
-      params: [`input_path="${ed.audioPath}"`, `min_gap=0.65s`],
+      params: [`input_path="${ed.audioPath}"`, `padding=${ed.toolConfig.silence.paddingMs}ms`],
       note: `${gapCount} silent gaps found in source`,
       ready: audioValid && ed.clips.length > 0,
       readyHint: "audio path must end in .mp3 or .wav",
@@ -71,7 +74,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
       icon: <IRatio className="w-4 h-4" />,
       color: "text-cyan",
       border: "border-cyan/40 bg-cyan/10 hover:bg-cyan/20",
-      params: [`input="${ed.videoPath}"`, ed.aspect === "9:16" ? "preset=16:9" : "preset=9:16"],
+      params: [`input="${ed.videoPath}"`, `${ed.toolConfig.vertical.width}x${ed.toolConfig.vertical.height}@${ed.toolConfig.vertical.fps}fps`],
       note:
         ed.aspect === "9:16"
           ? "currently 9:16 — run to revert to landscape"
@@ -86,7 +89,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
       icon: <ICaptions className="w-4 h-4" />,
       color: "text-sky",
       border: "border-sky/40 bg-sky/10 hover:bg-sky/20",
-      params: [`input_path="${ed.audioPath}"`, "model=asr-v2"],
+      params: [`input_path="${ed.audioPath}"`, `model=${ed.toolConfig.transcribe.modelSize}`, `task=${ed.toolConfig.transcribe.task}`],
       note: ed.captions ? `${ed.captions.length} caption blocks on TX` : "TX track is empty",
       ready: audioValid,
       readyHint: "audio path must end in .mp3 or .wav",
@@ -190,6 +193,43 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                     <span key={p} className="chip !text-[9.5px]">{p}</span>
                   ))}
                 </div>
+                {t.id === "silence" && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="text-[9px] text-faint">MODEL
+                      <select className="path-input mt-1 !py-1" value={ed.toolConfig.silence.modelSize} onChange={(e) => updateConfig("silence", { modelSize: e.target.value })}>
+                        <option>tiny</option><option>base</option><option>small</option><option>medium</option><option>large</option>
+                      </select>
+                    </label>
+                    <label className="text-[9px] text-faint">PADDING MS
+                      <input className="path-input mt-1 !py-1" type="number" min="0" max="2000" step="50" value={ed.toolConfig.silence.paddingMs} onChange={(e) => updateConfig("silence", { paddingMs: Number(e.target.value) || 0 })} />
+                    </label>
+                  </div>
+                )}
+                {t.id === "vertical" && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    <label className="text-[9px] text-faint">WIDTH<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.vertical.width} onChange={(e) => updateConfig("vertical", { width: Number(e.target.value) || 144 })} /></label>
+                    <label className="text-[9px] text-faint">HEIGHT<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.vertical.height} onChange={(e) => updateConfig("vertical", { height: Number(e.target.value) || 144 })} /></label>
+                    <label className="text-[9px] text-faint">FPS<input className="path-input mt-1 !py-1" type="number" min="1" max="120" value={ed.toolConfig.vertical.fps} onChange={(e) => updateConfig("vertical", { fps: Number(e.target.value) || 1 })} /></label>
+                  </div>
+                )}
+                {t.id === "transcribe" && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="text-[9px] text-faint">MODEL
+                      <select className="path-input mt-1 !py-1" value={ed.toolConfig.transcribe.modelSize} onChange={(e) => updateConfig("transcribe", { modelSize: e.target.value })}>
+                        <option>tiny</option><option>base</option><option>small</option><option>medium</option><option>large</option>
+                      </select>
+                    </label>
+                    <label className="text-[9px] text-faint">TASK
+                      <select className="path-input mt-1 !py-1" value={ed.toolConfig.transcribe.task} onChange={(e) => updateConfig("transcribe", { task: e.target.value })}>
+                        <option value="transcribe">transcribe</option><option value="translate">translate</option>
+                      </select>
+                    </label>
+                    <label className="text-[9px] text-faint">LANGUAGE
+                      <input className="path-input mt-1 !py-1" value={ed.toolConfig.transcribe.language} onChange={(e) => updateConfig("transcribe", { language: e.target.value })} placeholder="auto" />
+                    </label>
+                    <label className="col-span-2 flex items-center gap-2 text-[10px] text-faint"><input type="checkbox" checked={ed.toolConfig.transcribe.wordTimestamps} onChange={(e) => updateConfig("transcribe", { wordTimestamps: e.target.checked })} /> word-level timestamps</label>
+                  </div>
+                )}
                 {job ? (
                   <div className="mt-2.5">
                     <div className="flex items-center gap-2 text-[10px] font-mono text-dim">

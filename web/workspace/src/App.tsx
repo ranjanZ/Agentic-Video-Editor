@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Monitor from "./components/Monitor";
 import Timeline from "./components/Timeline";
 import ToolsPanel from "./components/ToolsPanel";
@@ -19,7 +19,6 @@ function Logo() {
 
 export default function App() {
   const ed = useEditor();
-  const [chatOpen, setChatOpen] = useState(false);
 
   /* global shortcuts */
   useEffect(() => {
@@ -141,8 +140,9 @@ export default function App() {
           <Timeline ed={ed} />
         </section>
 
-        <aside className="min-h-0">
+        <aside className="min-h-0 flex flex-col gap-4">
           <ConsolePanel ed={ed} />
+          <ChatPanel ed={ed} />
         </aside>
       </main>
 
@@ -160,15 +160,6 @@ export default function App() {
         </span>
       </footer>
 
-      {chatOpen && <ChatPanel ed={ed} onClose={() => setChatOpen(false)} />}
-      <button
-        className="fixed z-30 bottom-5 right-5 btn btn-amber shadow-xl"
-        onClick={() => setChatOpen((open) => !open)}
-        aria-label={chatOpen ? "Close agent chat" : "Open agent chat"}
-        title={chatOpen ? "Close agent chat" : "Open agent chat"}
-      >
-        {chatOpen ? "Close chat" : "Agent chat"}
-      </button>
     </div>
   );
 }

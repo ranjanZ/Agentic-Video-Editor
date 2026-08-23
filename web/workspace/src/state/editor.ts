@@ -42,6 +42,11 @@ export interface Version {
 }
 
 export type ToolId = "silence" | "vertical" | "transcribe";
+export interface ToolConfig {
+  silence: { modelSize: string; paddingMs: number };
+  vertical: { width: number; height: number; fps: number };
+  transcribe: { modelSize: string; language: string; task: "transcribe" | "translate"; wordTimestamps: boolean };
+}
 export interface JobState {
   progress: number;
   status: string;
@@ -213,6 +218,11 @@ export function useEditor() {
     { id: "audio-default", path: DEFAULT_AUDIO_PATH, type: "audio", duration: 0 },
   ]);
   const [outputVideoPath, setOutputVideoPath] = useState<string | null>(null);
+  const [toolConfig, setToolConfig] = useState<ToolConfig>({
+    silence: { modelSize: "base", paddingMs: 200 },
+    vertical: { width: 1080, height: 1920, fps: 30 },
+    transcribe: { modelSize: "base", language: "", task: "transcribe", wordTimestamps: true },
+  });
 
   const toMediaUrl = (path: string) => {
     const dataPath = path.replace(/^.*?data[\\/]/, "").replace(/\\/g, "/");
@@ -439,7 +449,7 @@ export function useEditor() {
       if (id === "silence") {
         const gaps = detectSilence();
         const gapTotal = gaps.reduce((a, [x, y]) => a + (y - x), 0);
-        log("tool", `remove_silence(input_path="${audioPath}", threshold=-32dB, min_gap=0.65s)`);
+        log("tool", `remove_silence(input_path="${audioPath}", model="${toolConfig.silence.modelSize}", padding=${toolConfig.silence.paddingMs}ms)`);
         runJob(
           id,
           [
@@ -449,7 +459,7 @@ export function useEditor() {
             [750, "cutting + ripple delete…"],
           ],
           () => {
-            const clips = talkClips(0.16, sourceDuration || undefined);
+            const clips = talkClips(toolConfig.silence.paddingMs / 1000, sourceDuration || undefined);
             const kept = clips.reduce((a, c) => a + c.dur, 0);
             dispatch({ type: "apply", snapshot: { clips, aspect: state.aspect, captions: state.captions } });
             pushVersion("silence removed", { clips, aspect: state.aspect, captions: state.captions });
@@ -461,7 +471,7 @@ export function useEditor() {
       } else if (id === "vertical") {
         const target: Aspect = state.aspect === "9:16" ? "16:9" : "9:16";
         const preset = target === "9:16" ? "9:16_vertical" : "16:9_landscape";
-        log("tool", `video_convert(input="${videoPath}", audio="${audioPath}", preset="${preset}")`);
+        log("tool", `video_convert(input="${videoPath}", preset="${preset}", size=${toolConfig.vertical.width}x${toolConfig.vertical.height}, fps=${toolConfig.vertical.fps})`);
         runJob(
           id,
           [
@@ -484,7 +494,7 @@ export function useEditor() {
           },
         );
       } else {
-        log("tool", `transcribe(input_path="${audioPath}", model="asr-v2", punctuate=true)`);
+        log("tool", `transcribe(input_path="${audioPath}", model="${toolConfig.transcribe.modelSize}", task="${toolConfig.transcribe.task}", word_timestamps=${toolConfig.transcribe.wordTimestamps})`);
         runJob(
           id,
           [
@@ -502,7 +512,7 @@ export function useEditor() {
         );
       }
     },
-    [busy, audioPath, videoPath, sourceDuration, state.clips, state.aspect, state.captions, log, runJob, pushVersion],
+    [busy, audioPath, videoPath, sourceDuration, toolConfig, state.clips, state.aspect, state.captions, log, runJob, pushVersion],
   );
 
   const resetProject = useCallback(() => {
@@ -625,6 +635,8 @@ export function useEditor() {
     mediaSources,
     addMediaSource,
     addSourceToTimeline,
+    toolConfig,
+    setToolConfig,
     outputVideoPath,
     setOutputVideoPath,
     totalDuration,

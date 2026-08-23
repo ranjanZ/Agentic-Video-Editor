@@ -75,6 +75,7 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
         self._current_iteration += 1
         
         context = context or {}
+        tool_config = context.get("tool_config", {})
         messages = [
             {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": user_input}
@@ -140,6 +141,29 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                             params[key] = fallback
                 if isinstance(params.get("output_path"), str) and params["output_path"].startswith("{{"):
                     params.pop("output_path")
+
+                # UI tool settings are authoritative for configurable operations.
+                if tool_name == "silence_removal":
+                    silence_config = tool_config.get("silence", {})
+                    if silence_config.get("modelSize"):
+                        params["model_size"] = silence_config["modelSize"]
+                    if silence_config.get("paddingMs") is not None:
+                        params["padding_ms"] = silence_config["paddingMs"]
+                elif tool_name == "vertical_crop":
+                    vertical_config = tool_config.get("vertical", {})
+                    for key, config_key in (("width", "width"), ("height", "height"), ("fps", "fps")):
+                        if vertical_config.get(config_key) is not None:
+                            params[key] = vertical_config[config_key]
+                elif tool_name == "transcription":
+                    transcription_config = tool_config.get("transcribe", {})
+                    if transcription_config.get("modelSize"):
+                        params["model_size"] = transcription_config["modelSize"]
+                    if transcription_config.get("language"):
+                        params["language"] = transcription_config["language"]
+                    if transcription_config.get("task"):
+                        params["task"] = transcription_config["task"]
+                    if transcription_config.get("wordTimestamps") is not None:
+                        params["word_timestamps"] = transcription_config["wordTimestamps"]
 
                 # Video tools need a concrete destination, not just a directory.
                 if tool_name in {"vertical_crop", "silence_removal", "speed_adjust", "audio_mix"}:
