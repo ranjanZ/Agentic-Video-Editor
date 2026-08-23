@@ -604,13 +604,22 @@ export function useEditor() {
 
       if (!output) return;
       setOutputVideoPath(output);
+      if (/\.(mp4|webm|mov|mkv)$/i.test(output)) setVideoPath(output);
       const isVertical =
         /vertical|9x16/i.test(output) ||
         toolResults.some((tool) => tool.metadata?.aspect_ratio === "9:16");
+      const isLandscape =
+        /landscape|horizontal/i.test(output) ||
+        toolResults.some((tool) => tool.metadata?.aspect_ratio === "16:9");
       if (isVertical && state.aspect !== "9:16") {
         const snapshot: Snapshot = { clips: state.clips, aspect: "9:16", captions: state.captions };
         dispatch({ type: "apply", snapshot });
         pushVersion("agent vertical conform", snapshot);
+      }
+      if (isLandscape && state.aspect !== "16:9") {
+        const snapshot: Snapshot = { clips: state.clips, aspect: "16:9", captions: state.captions };
+        dispatch({ type: "apply", snapshot });
+        pushVersion("agent landscape conform", snapshot);
       }
       log("ok", `program out · ${output}`);
     },
