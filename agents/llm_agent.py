@@ -86,15 +86,20 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
             context_str = json.dumps(context, indent=2)
             messages.append({"role": "system", "content": f"Context: {context_str}"})
         
+        # Handle simple transport/orientation commands without requiring Ollama.
+        direct_calls = self._direct_tool_calls(user_input, context)
+        if direct_calls:
+            return self._execute_tool_calls(direct_calls, user_input, context, tool_config)
+
         # Get LLM response
         response = self.llm_service.chat(messages)
         
         if not response.get("success"):
+            fallback_calls = self._fallback_tool_calls(user_input, context)
+            if fallback_calls:
+                return self._execute_tool_calls(fallback_calls, user_input, context, tool_config)
             self._update_state(AgentState.ERROR)
-            return AgentMessage(
-                role="assistant",
-                content=f"Error: Could not process request - {response.get('error', 'Unknown error')}"
-            )
+            return AgentMessage(role="assistant", content=f"Error: Could not process request - {response.get('error', 'Unknown error')}")
         
         llm_response = response["content"]
         
@@ -175,6 +180,9 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                         output_dir = params.get("output_dir") or "data/output"
                         params["output_path"] = os.path.join(output_dir, f"{stem}{suffix}.mp4")
                 
+                if tool_name == "speed_adjust":
+                    params.setdefault("speed_factor", 1.0)
+
                 # Validate required parameters for video_split tool
                 if tool_name == "video_split":
                     missing_required = []
@@ -239,6 +247,57 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                 content=llm_response,
                 metadata={"llm_response": llm_response}
             )
+
+    def _direct_tool_calls(self, text: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Return unambiguous commands that should not depend on an LLM."""
+        lowered = text.lower()
+        video_path = context.get("video_path")
+        if not video_path:
+            return []
+        if "landscape" in lowered or "horizontal" in lowered:
+            import os
+            stem = os.path.splitext(os.path.basename(video_path))[0]
+            return [{"tool": "landscape_crop", "params": {"video_path": video_path, "output_path": os.path.join(context.get("output_dir", "data/output"), f"{stem}_landscape.mp4")}}]
+        if "speed" in lowered or "slow motion" in lowered or "time lapse" in lowered:
+            return []
+        return []
+
+    def _fallback_tool_calls(self, text: str, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Keep common edits usable when Ollama is offline."""
+        lowered = text.lower()
+        video_path = context.get("video_path")
+        if not video_path:
+            return []
+        if any(word in lowered for word in ("speed", "fast", "slow", "time-lapse", "timelapse")):
+            import os
+            return [{"tool": "speed_adjust", "params": {
+                "video_path": video_path,
+                "output_path": os.path.join(context.get("output_dir", "data/output"), "speed_adjusted.mp4"),
+                "speed_factor": 1.0,
+            }}]
+        return []
+
+    def _execute_tool_calls(self, tool_calls: List[Dict[str, Any]], user_input: str, context: Dict[str, Any], tool_config: Dict[str, Any]) -> AgentMessage:
+        """Execute a normalized set of calls through the shared path."""
+        self._update_state(AgentState.EXECUTING)
+        results = []
+        for call in tool_calls:
+            tool_name = call.get("tool")
+            params = dict(call.get("params", {}))
+            if context.get("video_path") and tool_name not in {"audio_mix", "transcription"}:
+                params["video_path"] = context["video_path"]
+            if tool_name == "speed_adjust":
+                params.setdefault("speed_factor", 1.0)
+            if tool_name in {"landscape_crop", "vertical_crop", "speed_adjust"}:
+                params.setdefault("output_path", f"{context.get('output_dir', 'data/output')}/{tool_name}.mp4")
+            result = self.mcp_server.call_tool(tool_name, params)
+            results.append(result)
+            if not result.get("success"):
+                self._update_state(AgentState.ERROR)
+                return AgentMessage(role="assistant", content=f"Error executing {tool_name}: {result.get('error', 'Unknown error')}", metadata={"tool_results": results})
+        outputs = [result.get("output_path") for result in results if result.get("output_path")]
+        self._update_state(AgentState.COMPLETE)
+        return AgentMessage(role="assistant", content=f"✅ Completed! {len(results)} tool(s) executed successfully.\n\nOutput: {outputs[0]}" if outputs else "✅ Completed.", metadata={"tool_results": results, "output_files": outputs})
     
     def _parse_tool_calls(self, response_text: str) -> List[Dict[str, Any]]:
         """

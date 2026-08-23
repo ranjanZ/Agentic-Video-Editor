@@ -14,6 +14,7 @@ from .speed_adjust_tool import SpeedAdjustTool
 from .vertical_crop_tool import VerticalCropTool
 from .audio_mix_tool import AudioMixTool
 from .process_video_tool import ProcessVideoTool
+from .landscape_crop_tool import LandscapeCropTool
 
 __version__ = "1.0.0"
 __all__ = [
@@ -27,4 +28,5 @@ __all__ = [
     "VerticalCropTool",
     "AudioMixTool",
     "ProcessVideoTool",
+    "LandscapeCropTool",
 ]

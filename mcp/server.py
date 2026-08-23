@@ -17,6 +17,7 @@ from tools.vertical_crop_tool import VerticalCropTool
 from tools.audio_mix_tool import AudioMixTool
 from tools.transcription_tool import TranscriptionTool
 from tools.process_video_tool import ProcessVideoTool
+from tools.landscape_crop_tool import LandscapeCropTool
 
 
 class MCPServer:
@@ -44,6 +45,7 @@ class MCPServer:
             AudioMixTool(),
             TranscriptionTool(),
             ProcessVideoTool(),
+            LandscapeCropTool(),
         ]
         for tool in tools:
             self.registry.register(tool)
