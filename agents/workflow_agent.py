@@ -19,13 +19,20 @@ class WorkflowAgent(BaseAgent):
     - Track workflow progress
     """
     
-    def __init__(self, config: Optional[AgentConfig] = None, tools: Optional[Dict] = None):
+    def __init__(self, config: Optional[AgentConfig] = None, tools: Optional[Dict] = None, mcp_server=None):
         super().__init__(config or AgentConfig(name="workflow_agent"))
         
-        # Register available tools
+        # Store MCP server reference
+        self.mcp_server = mcp_server
+        
+        # Register available tools (either directly or via MCP server)
         if tools:
             for name, tool in tools.items():
                 self.register_tool(name, tool)
+        elif mcp_server:
+            # Get tools from MCP server
+            mcp_tools = mcp_server.list_tools()
+            # Tools will be called via MCP server during execution
         
         # Predefined workflow templates
         self._workflow_templates = {
@@ -147,24 +154,41 @@ class WorkflowAgent(BaseAgent):
             # Substitute context variables
             params = self._substitute_params(params, context)
             
-            tool = self._tools.get(tool_name)
-            if not tool:
-                return {"success": False, "error": f"Tool '{tool_name}' not found"}
-            
-            try:
-                result = tool.execute(**params)
-                results.append({"step": i + 1, "tool": tool_name, "result": result.to_dict()})
+            # Execute via MCP server if available, otherwise use registered tools
+            if self.mcp_server:
+                result_dict = self.mcp_server.call_tool(tool_name, params)
+                result_success = result_dict.get("success", False)
+                result_error = result_dict.get("error")
+                result_output_path = result_dict.get("output_path")
                 
-                if not result.success:
-                    return {"success": False, "error": result.error, "results": results}
+                if not result_success:
+                    return {"success": False, "error": result_error, "results": results}
                 
                 # Store output for next steps
-                if result.output_path:
-                    context[f"output_{i}"] = result.output_path
-                    context["latest_output"] = result.output_path
+                if result_output_path:
+                    context[f"output_{i}"] = result_output_path
+                    context["latest_output"] = result_output_path
+                
+                results.append({"step": i + 1, "tool": tool_name, "result": result_dict})
+            else:
+                tool = self._tools.get(tool_name)
+                if not tool:
+                    return {"success": False, "error": f"Tool '{tool_name}' not found"}
+                
+                try:
+                    result = tool.execute(**params)
+                    results.append({"step": i + 1, "tool": tool_name, "result": result.to_dict()})
                     
-            except Exception as e:
-                return {"success": False, "error": str(e), "results": results}
+                    if not result.success:
+                        return {"success": False, "error": result.error, "results": results}
+                    
+                    # Store output for next steps
+                    if result.output_path:
+                        context[f"output_{i}"] = result.output_path
+                        context["latest_output"] = result.output_path
+                        
+                except Exception as e:
+                    return {"success": False, "error": str(e), "results": results}
         
         return {
             "success": True,
