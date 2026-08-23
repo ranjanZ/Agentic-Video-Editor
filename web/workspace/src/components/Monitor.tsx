@@ -18,6 +18,7 @@ export default function Monitor({ ed }: { ed: Editor }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tcMainRef = useRef<HTMLSpanElement>(null);
   const tcSrcRef = useRef<HTMLSpanElement>(null);
+  const programmaticMediaAction = useRef(false);
 
   const live = useRef({
     playhead: ed.playhead,
@@ -86,8 +87,14 @@ export default function Monitor({ ed }: { ed: Editor }) {
     if (Math.abs(video.currentTime - ed.playhead) > 0.08) {
       video.currentTime = Math.min(ed.playhead, video.duration || ed.totalDuration);
     }
-    if (ed.playing && video.paused) void video.play().catch(() => undefined);
-    if (!ed.playing && !video.paused) video.pause();
+    if (ed.playing && video.paused) {
+      programmaticMediaAction.current = true;
+      void video.play().catch(() => { programmaticMediaAction.current = false; });
+    }
+    if (!ed.playing && !video.paused) {
+      programmaticMediaAction.current = true;
+      video.pause();
+    }
   }, [ed.playing, ed.playhead, ed.totalDuration]);
 
   return (
@@ -132,9 +139,17 @@ export default function Monitor({ ed }: { ed: Editor }) {
               className="w-full h-full block rounded-md shadow-[0_0_60px_rgba(0,0,0,0.6)] object-contain bg-black"
               onTimeUpdate={(event) => ed.setPlayhead(event.currentTarget.currentTime)}
               onPlay={() => {
+                if (programmaticMediaAction.current) {
+                  programmaticMediaAction.current = false;
+                  return;
+                }
                 if (!ed.playing) ed.togglePlay();
               }}
               onPause={() => {
+                if (programmaticMediaAction.current) {
+                  programmaticMediaAction.current = false;
+                  return;
+                }
                 if (ed.playing) ed.togglePlay();
               }}
             />

@@ -336,7 +336,7 @@ export function useEditor() {
         return clamp((f + frames) / FPS, 0, totalRef.current);
       });
     },
-    [],
+    [log],
   );
   const skip = useCallback(
     (to: "start" | "end") => {
@@ -413,25 +413,29 @@ export function useEditor() {
     (
       id: ToolId,
       steps: Array<[number, string]>,
-      finish: () => void,
+      finish: () => void | Promise<void>,
     ) => {
       const total = steps.reduce((a, [d]) => a + d, 0);
       let elapsed = 0;
       setJobs((j) => ({ ...j, [id]: { progress: 0, status: steps[0][1], complete: false } }));
       for (const [dur, status] of steps) {
         const at = elapsed;
-        jobTimers.current.push(
-          window.setTimeout(
-            () => setJobs((j) => ({ ...j, [id]: { progress: Math.min(0.98, at / total), status, complete: false } })),
-            30,
-          ),
-        );
+        jobTimers.current.push(window.setTimeout(
+          () => setJobs((j) => ({ ...j, [id]: { progress: Math.min(0.98, at / total), status, complete: false } })),
+          at,
+        ));
         elapsed += dur;
       }
       jobTimers.current.push(
-        window.setTimeout(() => {
-          setJobs((j) => ({ ...j, [id]: { progress: 1, status: "complete", complete: true } }));
-          finish();
+        window.setTimeout(async () => {
+          setJobs((j) => ({ ...j, [id]: { progress: 0.98, status: "finishing…", complete: false } }));
+          try {
+            await finish();
+            setJobs((j) => ({ ...j, [id]: { progress: 1, status: "complete", complete: true } }));
+          } catch (error) {
+            setJobs((j) => ({ ...j, [id]: { progress: 1, status: "failed", complete: true } }));
+            log("err", `${id} failed · ${error instanceof Error ? error.message : "unknown error"}`);
+          }
         }, elapsed),
       );
     },
@@ -453,17 +457,12 @@ export function useEditor() {
             [700, `flagging ${gaps.length} silent gaps…`],
             [750, "cutting + ripple delete…"],
           ],
-          () => {
+          async () => {
             const clips = talkClips(toolConfig.silence.paddingMs / 1000, sourceDuration || undefined);
             const kept = clips.reduce((a, c) => a + c.dur, 0);
-            dispatch({ type: "apply", snapshot: { clips, aspect: state.aspect, captions: state.captions } });
-            pushVersion("silence removed", { clips, aspect: state.aspect, captions: state.captions });
-            setPlayhead(0);
-            setSelected(null);
-            log("ok", `silence removed · ${gaps.length} gaps (${fmtSec(gapTotal)}) cut · timeline now ${fmtSec(kept)}`);
             const stem = videoPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") || "video";
             const outputPath = `data/output/${stem}_no_silence.mp4`;
-            void fetch("/api/tools/silence_removal", {
+            const response = await fetch("/api/tools/silence_removal", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -473,12 +472,16 @@ export function useEditor() {
                 padding_ms: toolConfig.silence.paddingMs,
                 threshold_db: toolConfig.silence.thresholdDb,
               }),
-            }).then(async (response) => {
-              const result = await response.json();
-              if (!response.ok || !result.success) throw new Error(result.error || "Silence removal render failed");
-              setOutputVideoPath(result.output_path || outputPath);
-              log("ok", `silence removal video ready · output → ${result.output_path || outputPath}`);
-            }).catch((error) => log("err", `silence removal render failed · ${error instanceof Error ? error.message : "unknown error"}`));
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || "Silence removal render failed");
+            dispatch({ type: "apply", snapshot: { clips, aspect: state.aspect, captions: state.captions } });
+            pushVersion("silence removed", { clips, aspect: state.aspect, captions: state.captions });
+            setPlayhead(0);
+            setSelected(null);
+            setOutputVideoPath(result.output_path || outputPath);
+            log("ok", `silence removed · ${gaps.length} gaps (${fmtSec(gapTotal)}) cut · timeline now ${fmtSec(kept)}`);
+            log("ok", `silence removal video ready · output → ${result.output_path || outputPath}`);
           },
         );
       } else if (id === "vertical") {
@@ -514,7 +517,7 @@ export function useEditor() {
                 log("ok", `vertical conform ready · output → ${result.output_path || outputPath}`);
               } catch (error) {
                 log("err", `vertical conversion failed · ${error instanceof Error ? error.message : "unknown error"}`);
-                return;
+                throw error;
               }
             }
             const snapshot: Snapshot = { clips: state.clips, aspect: target, captions: state.captions };
@@ -557,6 +560,7 @@ export function useEditor() {
               log("ok", `pipeline complete · ${result.metadata?.output_files?.length || 0} output file(s)`);
             } catch (error) {
               log("err", `pipeline failed · ${error instanceof Error ? error.message : "unknown error"}`);
+              throw error;
             }
           },
         );

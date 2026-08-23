@@ -56,7 +56,7 @@ def speech_to_text(audio_path, model_size="base", language=None, task=None):
         if task:
             options["task"] = task
 
-        result = model.transcribe(audio_path, **options)
+        result = model.transcribe(audio_path, fp16=False, **options)
         return result["text"]
     except Exception as e:
         raise RuntimeError(f"Speech-to-text conversion failed: {e}")

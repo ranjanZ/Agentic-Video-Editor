@@ -32,7 +32,7 @@ def speech_to_text_with_timestamps(audio_path, model_size="base", task="translat
         raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
     model = whisper.load_model(model_size)
-    result = model.transcribe(audio_path, task=task, word_timestamps=False)
+    result = model.transcribe(audio_path, task=task, word_timestamps=False, fp16=False)
     full_text = result["text"]
     segments = [
         {"start": seg["start"], "end": seg["end"], "text": seg["text"].strip()}

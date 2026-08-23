@@ -131,7 +131,7 @@ class SilenceRemovalTool(BaseTool):
             
             # Step 2: Transcribe with timestamps
             model = whisper.load_model(model_size)
-            result = model.transcribe(temp_audio, task=task, word_timestamps=False)
+            result = model.transcribe(temp_audio, task=task, word_timestamps=False, fp16=False)
             
             segments = [
                 {"start": seg["start"], "end": seg["end"], "text": seg["text"].strip()}

@@ -116,7 +116,8 @@ class TranscriptionTool(BaseTool):
                 audio_path,
                 language=language,
                 task=task,
-                word_timestamps=word_timestamps
+                word_timestamps=word_timestamps,
+                fp16=False
             )
             
             # Cleanup temp file
