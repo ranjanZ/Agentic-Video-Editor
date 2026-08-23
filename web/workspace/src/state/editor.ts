@@ -53,7 +53,13 @@ export interface AgentResult {
   output_files?: string[];
   output_path?: string;
   metadata?: {
-    tool_results?: Array<{ output_path?: string; metadata?: { aspect_ratio?: string } }>;
+    tool_results?: Array<{
+      output_path?: string;
+      metadata?: {
+        aspect_ratio?: string;
+        kept_segments?: Array<{ start: number; end: number }>;
+      };
+    }>;
   };
 }
 
@@ -454,11 +460,29 @@ export function useEditor() {
   const applyAgentResult = useCallback(
     (result: AgentResult) => {
       const output = result.output_files?.find(Boolean) || result.output_path;
+      const toolResults = result.metadata?.tool_results ?? [];
+      const silenceMetadata = toolResults.find((tool) => tool.metadata?.kept_segments)?.metadata;
+      const keptSegments = silenceMetadata?.kept_segments;
+
+      if (keptSegments?.length) {
+        const clips: Clip[] = keptSegments.map((segment, index) => ({
+          id: `agent-talk-${index}-${Date.now()}`,
+          src: segment.start,
+          dur: Math.max(0.05, segment.end - segment.start),
+        }));
+        const snapshot: Snapshot = { clips, aspect: state.aspect, captions: state.captions };
+        dispatch({ type: "apply", snapshot });
+        pushVersion("agent silence removal", snapshot);
+        setPlayhead(0);
+        setSelected(null);
+        log("ok", `timeline synced · ${clips.length} speech clips · ${fmtSec(clips.reduce((sum, clip) => sum + clip.dur, 0))}`);
+      }
+
       if (!output) return;
       setOutputVideoPath(output);
       const isVertical =
         /vertical|9x16/i.test(output) ||
-        result.metadata?.tool_results?.some((tool) => tool.metadata?.aspect_ratio === "9:16");
+        toolResults.some((tool) => tool.metadata?.aspect_ratio === "9:16");
       if (isVertical && state.aspect !== "9:16") {
         const snapshot: Snapshot = { clips: state.clips, aspect: "9:16", captions: state.captions };
         dispatch({ type: "apply", snapshot });

@@ -104,7 +104,7 @@ class TranscriptionTool(BaseTool):
                         success=False,
                         error="No audio stream found in the video"
                     )
-                video.audio.write_audiofile(temp_audio, verbose=False, logger=None)
+                video.audio.write_audiofile(temp_audio, logger=None)
                 video.close()
                 audio_path = temp_audio
             else:

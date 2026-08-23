@@ -74,6 +74,7 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
         self.add_message("user", user_input)
         self._current_iteration += 1
         
+        context = context or {}
         messages = [
             {"role": "system", "content": self._system_prompt},
             {"role": "user", "content": user_input}
@@ -113,20 +114,38 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                 extracted_params = self._extract_params_from_text(user_input, tool_name)
                 params.update(extracted_params)
                 
-                # Inject context into parameters (highest priority)
-                if context:
-                    if "video_path" not in params and context.get("video_path"):
-                        params["video_path"] = context["video_path"]
-                    if "audio_path" not in params and context.get("audio_path"):
+                # The editor context is authoritative. LLMs often invent stale demo paths.
+                if context.get("video_path") and tool_name not in {"audio_mix", "transcription"}:
+                    params["video_path"] = context["video_path"]
+                if context.get("audio_path") and tool_name in {"audio_mix", "video_split", "transcription"}:
+                    if tool_name == "transcription":
+                        params["input_path"] = context["audio_path"]
+                    else:
                         params["audio_path"] = context["audio_path"]
-                    if "output_dir" not in params and context.get("output_dir"):
-                        params["output_dir"] = context["output_dir"]
+                if context.get("output_dir"):
+                    params["output_dir"] = context["output_dir"]
+
+                if tool_name == "silence_removal" and context.get("video_path"):
+                    params["video_path"] = context["video_path"]
+                if tool_name == "transcription" and context.get("video_path") and not context.get("audio_path"):
+                    params["input_path"] = context["video_path"]
+
+                # Resolve template values emitted by the model before calling a tool.
+                for key in ("video_path", "input_path", "audio_path"):
+                    if isinstance(params.get(key), str) and params[key].startswith("{{"):
+                        fallback = context.get(key)
+                        if key == "input_path":
+                            fallback = context.get("audio_path") or context.get("video_path")
+                        if fallback:
+                            params[key] = fallback
+                if isinstance(params.get("output_path"), str) and params["output_path"].startswith("{{"):
+                    params.pop("output_path")
 
                 # Video tools need a concrete destination, not just a directory.
                 if tool_name in {"vertical_crop", "silence_removal", "speed_adjust", "audio_mix"}:
                     if not params.get("output_path"):
                         import os
-                        source = params.get("video_path") or params.get("input_path") or "edited_video.mp4"
+                        source = params.get("video_path") or params.get("input_path") or context.get("video_path") or "edited_video.mp4"
                         stem = os.path.splitext(os.path.basename(source))[0]
                         suffix = "_vertical_9x16" if tool_name == "vertical_crop" else f"_{tool_name}"
                         output_dir = params.get("output_dir") or "data/output"

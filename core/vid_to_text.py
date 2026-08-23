@@ -25,7 +25,7 @@ def extract_speech_from_video(video_path, output_audio_path="temp_audio.wav"):
             raise ValueError("No audio stream found in the video.")
 
         # Write audio to file
-        audio.write_audiofile(output_audio_path, verbose=False, logger=None)
+        audio.write_audiofile(output_audio_path, logger=None)
         video.close()
         return output_audio_path
     except Exception as e:

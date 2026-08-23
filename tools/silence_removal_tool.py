@@ -118,7 +118,7 @@ class SilenceRemovalTool(BaseTool):
                     error="No audio stream found in the video"
                 )
             
-            video.audio.write_audiofile(temp_audio, verbose=False, logger=None)
+            video.audio.write_audiofile(temp_audio, logger=None)
             video.close()
             
             # Step 2: Transcribe with timestamps
@@ -143,11 +143,14 @@ class SilenceRemovalTool(BaseTool):
             padding_sec = padding_ms / 1000.0
             
             speech_clips = []
+            kept_segments = []
             for seg in segments:
                 start = max(0, seg["start"] - padding_sec)
                 end = min(video.duration, seg["end"] + padding_sec)
                 if end > start:
-                    speech_clips.append(video.subclip(start, end))
+                    clip_method = getattr(video, "subclipped", video.subclip)
+                    speech_clips.append(clip_method(start, end))
+                    kept_segments.append({"start": start, "end": end})
             
             if not speech_clips:
                 video.close()
@@ -159,7 +162,8 @@ class SilenceRemovalTool(BaseTool):
                 )
             
             final_clip = concatenate_videoclips(speech_clips, method="compose")
-            final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac")
+            original_duration = video.duration or 0
+            final_clip.write_videofile(output_path, codec="libx264", audio_codec="aac", logger=None)
             
             # Cleanup
             video.close()
@@ -168,8 +172,7 @@ class SilenceRemovalTool(BaseTool):
                 os.remove(temp_audio)
             
             # Calculate statistics
-            original_duration = video.duration if hasattr(video, 'duration') else 0
-            new_duration = sum(seg["end"] - seg["start"] for seg in segments)
+            new_duration = sum(clip.duration or 0 for clip in speech_clips)
             
             return ToolResult(
                 success=True,
@@ -181,7 +184,9 @@ class SilenceRemovalTool(BaseTool):
                     "new_duration": new_duration,
                     "time_saved": original_duration - new_duration,
                     "transcript": result["text"],
-                    "segments": segments
+                    "segments": segments,
+                    "kept_segments": kept_segments,
+                    "padding_ms": padding_ms,
                 }
             )
             

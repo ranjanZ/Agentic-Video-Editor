@@ -47,7 +47,7 @@ def _even(n):
 
 def subclip(clip, start, end):
     """Version-agnostic subclip."""
-    if MOVIEPY_V2:
+    if hasattr(clip, "subclipped"):
         return clip.subclipped(start, end)
     return clip.subclip(start, end)
 
