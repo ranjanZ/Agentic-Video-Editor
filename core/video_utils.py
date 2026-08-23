@@ -49,7 +49,7 @@ def subclip(clip, start, end):
     """Version-agnostic subclip."""
     if hasattr(clip, "subclipped"):
         return clip.subclipped(start, end)
-    return clip.subclip(start, end)
+    return clip.subclipped(start, end)
 
 
 def set_audio(clip, audio):
