@@ -122,6 +122,32 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                     if "output_dir" not in params and context.get("output_dir"):
                         params["output_dir"] = context["output_dir"]
                 
+                # Auto-generate output_path if missing but output_dir is available
+                if "output_path" not in params or not params["output_path"]:
+                    if context and context.get("output_dir"):
+                        # Generate a sensible output path based on tool name
+                        import os
+                        base_name = f"{tool_name}_output"
+                        if tool_name == "vertical_crop":
+                            base_name = "vertical_9x16_output"
+                        elif tool_name == "silence_removal":
+                            base_name = "no_silence_output"
+                        elif tool_name == "speed_adjust":
+                            base_name = "speed_adjusted_output"
+                        elif tool_name == "audio_mix":
+                            base_name = "mixed_audio_output"
+                        elif tool_name == "transcription":
+                            base_name = "transcript_output"
+                        
+                        # Determine extension based on tool type
+                        text_tools = ["transcription"]
+                        ext = ".txt" if tool_name in text_tools else ".mp4"
+                        
+                        params["output_path"] = os.path.join(
+                            context["output_dir"],
+                            f"{base_name}{ext}"
+                        )
+                
                 # Validate required parameters for video_split tool
                 if tool_name == "video_split":
                     missing_required = []

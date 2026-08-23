@@ -125,6 +125,54 @@ def create_app(config=None):
         
         return send_from_directory(folder, filename)
     
+    @app.route('/data/output', methods=['GET'])
+    def list_output_files():
+        """List and serve output files directory."""
+        import os
+        output_folder = app.config['OUTPUT_FOLDER']
+        if not os.path.exists(output_folder):
+            return jsonify({'error': 'Output folder not found'}), 404
+        
+        files = []
+        for f in os.listdir(output_folder):
+            file_path = os.path.join(output_folder, f)
+            if os.path.isfile(file_path) and not f.startswith('.'):
+                files.append({
+                    'name': f,
+                    'size': os.path.getsize(file_path),
+                    'url': f'/data/output/{f}'
+                })
+        
+        # Return HTML page with file listing if browser requests it
+        if request.headers.get('Accept', '').includes('text/html'):
+            html = f'''<!DOCTYPE html>
+<html>
+<head><title>Output Files - FrameForge</title>
+<style>
+body {{ font-family: system-ui, sans-serif; padding: 2rem; background: #0a0f1a; color: #e8eef8; }}
+h1 {{ color: #ffb224; }}
+.file-list {{ list-style: none; padding: 0; }}
+.file-item {{ padding: 0.75rem 1rem; margin: 0.5rem 0; background: #111927; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }}
+.file-item:hover {{ background: #1a2639; }}
+.file-name {{ font-family: monospace; color: #3adbe6; }}
+.file-size {{ color: #8899ac; font-size: 0.85em; }}
+.download-btn {{ background: #ffb224; color: #0a0f1a; padding: 0.5rem 1rem; border-radius: 4px; text-decoration: none; font-weight: 600; }}
+.download-btn:hover {{ background: #ffc952; }}
+</style>
+</head>
+<body>
+<h1>📁 Output Files</h1>
+<p>Download your processed videos and audio files.</p>
+<ul class="file-list">
+{"".join(f'<li class="file-item"><span class="file-name">{f["name"]}</span><span class="file-size">{(f["size"]/1024/1024):.2f} MB</span><a href="{f["url"]}" class="download-btn" download>Download</a></li>' for f in files)}
+</ul>
+{files and '<p style="margin-top:2rem;"><a href="/" style="color:#3adbe6;">← Back to editor</a></p>' or '<p>No output files yet. Run a tool or use the chat to create one.</p>'}
+</body>
+</html>'''
+            return html
+        
+        return jsonify({'files': files})
+    
     @app.route('/api/tools', methods=['GET'])
     def list_tools():
         """List all available tools."""

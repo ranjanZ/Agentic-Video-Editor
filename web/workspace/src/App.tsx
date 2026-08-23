@@ -121,6 +121,9 @@ export default function App() {
             <IRedo className="w-4 h-4" />
           </button>
           <div className="h-6 w-px bg-line" />
+          <button className="btn" onClick={() => window.open('/data/output', '_blank')} title="Open output folder">
+            <IDownload className="w-4 h-4" /> Output
+          </button>
           <button className="btn btn-amber" onClick={ed.exportEDL}>
             <IDownload className="w-4 h-4" /> Export
           </button>

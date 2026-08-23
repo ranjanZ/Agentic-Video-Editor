@@ -4,6 +4,7 @@ import type { Editor } from "../state/editor";
 type Message = {
   role: "user" | "assistant";
   content: string;
+  output_files?: string[];
 };
 
 type ChatPanelProps = {
@@ -44,7 +45,20 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "The agent could not respond.");
-      setMessages((current) => [...current, { role: "assistant", content: data.content || "Done." }]);
+      
+      // Extract output files from response
+      const outputFiles = data.output_files || (data.metadata?.output_files ? [data.metadata.output_files] : undefined);
+      
+      setMessages((current) => [...current, { 
+        role: "assistant", 
+        content: data.content || "Done.",
+        output_files: outputFiles
+      }]);
+      
+      // If there are output files, notify the editor to update Program Out
+      if (outputFiles && outputFiles.length > 0) {
+        ed.log("ok", `chat output ready → ${outputFiles[0]}`);
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "The agent could not respond.");
     } finally {
@@ -69,6 +83,23 @@ export default function ChatPanel({ ed, onClose }: ChatPanelProps) {
           <div key={`${message.role}-${index}`} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[88%] rounded-lg px-3 py-2 text-[12px] leading-relaxed ${message.role === "user" ? "bg-amber text-bg0" : "bg-bg3 text-ink border border-line2"}`}>
               {message.content}
+              {message.output_files && message.output_files.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-line/50">
+                  <div className="text-[10px] font-mono text-faint mb-1">Output files:</div>
+                  {message.output_files.map((file, fileIndex) => (
+                    <a
+                      key={fileIndex}
+                      href={`/data/${file.startsWith('data/output') ? 'output' : file.startsWith('data/temp') ? 'temp' : 'input'}/${file.split('/').pop()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-[11px] text-cyan hover:text-amber transition-colors truncate"
+                      title={file}
+                    >
+                      📁 {file.split('/').pop()}
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
