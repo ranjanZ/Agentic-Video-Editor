@@ -1,24 +1,47 @@
-```
-# Python
+```gitignore
+# Python cache files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
+# Compiled and build artifacts
+*.o
+*.obj
+*.out
+*.so
+*.dll
+*.dylib
+
+# Dependencies
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*
+
 # Logs and temp files
 *.log
 *.tmp
+*.swp
+*.swo
 
-# Environment
-.env
-.env.local
-*.env.*
+# Coverage reports
+.coverage
+htmlcov/
+coverage/
 
 # Editors
 .vscode/
 .idea/
 
-# Dependencies
-venv/
-.venv/
+# System files
+.DS_Store
+Thumbs.db
+
+# MyPy cache
+.mypy_cache/
+# Pytest cache
+.pytest_cache/
 ```

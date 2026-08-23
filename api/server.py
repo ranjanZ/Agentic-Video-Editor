@@ -77,7 +77,24 @@ def create_app(config=None):
         # Check if file exists in workspace folder
         file_path = os.path.join(app.workspace_folder, filename)
         if os.path.exists(file_path):
-            return send_from_directory(app.workspace_folder, filename)
+            # Define custom MIME types for TypeScript/TSX files
+            mime_types = {
+                '.tsx': 'text/javascript',
+                '.ts': 'text/javascript',
+                '.jsx': 'text/javascript',
+                '.js': 'text/javascript',
+                '.css': 'text/css',
+                '.html': 'text/html',
+                '.json': 'application/json',
+                '.woff': 'font/woff',
+                '.woff2': 'font/woff2',
+                '.ttf': 'font/ttf',
+                '.eot': 'application/vnd.ms-fontobject',
+                '.svg': 'image/svg+xml',
+            }
+            _, ext = os.path.splitext(filename)
+            mime_type = mime_types.get(ext.lower(), 'application/octet-stream')
+            return send_from_directory(app.workspace_folder, filename, mimetype=mime_type)
         return jsonify({'error': 'File not found'}), 404
     
     @app.route('/api/health', methods=['GET'])
