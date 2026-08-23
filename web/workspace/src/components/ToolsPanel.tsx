@@ -20,7 +20,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
   const audioValid = AUDIO_RE.test(ed.audioPath.trim());
   const videoValid = VIDEO_RE.test(ed.videoPath.trim());
   const gapCount = useMemo(() => detectSilence().length, []);
-  const updateConfig = (tool: "silence" | "vertical" | "transcribe", values: Record<string, unknown>) => {
+  const updateConfig = (tool: "silence" | "vertical" | "transcribe" | "pipeline", values: Record<string, unknown>) => {
     ed.setToolConfig((current) => ({ ...current, [tool]: { ...current[tool], ...values } }));
   };
 
@@ -52,6 +52,18 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
     ready: boolean;
     readyHint?: string;
   }> = [
+    {
+      id: "pipeline",
+      name: "Process video pipeline",
+      desc: "Splits, speed-adjusts, mixes background music, and optionally creates vertical delivery files.",
+      icon: <IFilm className="w-4 h-4" />,
+      color: "text-mint",
+      border: "border-mint/40 bg-mint/10 hover:bg-mint/20",
+      params: [`${ed.toolConfig.pipeline.maxSegmentMinutes}min segments`, `${ed.toolConfig.pipeline.targetDurationSeconds}s target`, ed.toolConfig.pipeline.verticalMode ? "9:16 on" : "original ratio"],
+      note: "process_video.py pipeline ready",
+      ready: videoValid && audioValid,
+      readyHint: "video and audio paths must be configured",
+    },
     {
       id: "silence",
       name: "Remove silence",
@@ -228,6 +240,19 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                       <input className="path-input mt-1 !py-1" value={ed.toolConfig.transcribe.language} onChange={(e) => updateConfig("transcribe", { language: e.target.value })} placeholder="auto" />
                     </label>
                     <label className="col-span-2 flex items-center gap-2 text-[10px] text-faint"><input type="checkbox" checked={ed.toolConfig.transcribe.wordTimestamps} onChange={(e) => updateConfig("transcribe", { wordTimestamps: e.target.checked })} /> word-level timestamps</label>
+                  </div>
+                )}
+                {t.id === "pipeline" && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="text-[9px] text-faint">SEGMENT MIN<input className="path-input mt-1 !py-1" type="number" min="0.1" value={ed.toolConfig.pipeline.maxSegmentMinutes} onChange={(e) => updateConfig("pipeline", { maxSegmentMinutes: Number(e.target.value) || 0.1 })} /></label>
+                    <label className="text-[9px] text-faint">TARGET SEC<input className="path-input mt-1 !py-1" type="number" min="1" value={ed.toolConfig.pipeline.targetDurationSeconds} onChange={(e) => updateConfig("pipeline", { targetDurationSeconds: Number(e.target.value) || 1 })} /></label>
+                    <label className="text-[9px] text-faint">MUSIC VOLUME<input className="path-input mt-1 !py-1" type="number" min="0" max="1" step="0.05" value={ed.toolConfig.pipeline.audioVolume} onChange={(e) => updateConfig("pipeline", { audioVolume: Number(e.target.value) || 0 })} /></label>
+                    <label className="text-[9px] text-faint">FPS<input className="path-input mt-1 !py-1" type="number" min="1" max="120" value={ed.toolConfig.pipeline.fps} onChange={(e) => updateConfig("pipeline", { fps: Number(e.target.value) || 1 })} /></label>
+                    <label className="col-span-2 flex items-center gap-2 text-[10px] text-faint"><input type="checkbox" checked={ed.toolConfig.pipeline.verticalMode} onChange={(e) => updateConfig("pipeline", { verticalMode: e.target.checked })} /> vertical 9:16 output</label>
+                    {ed.toolConfig.pipeline.verticalMode && <>
+                      <label className="text-[9px] text-faint">WIDTH<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.pipeline.width} onChange={(e) => updateConfig("pipeline", { width: Number(e.target.value) || 144 })} /></label>
+                      <label className="text-[9px] text-faint">HEIGHT<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.pipeline.height} onChange={(e) => updateConfig("pipeline", { height: Number(e.target.value) || 144 })} /></label>
+                    </>}
                   </div>
                 )}
                 {job ? (

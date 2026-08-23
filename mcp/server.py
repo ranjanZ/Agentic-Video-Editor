@@ -16,6 +16,7 @@ from tools.speed_adjust_tool import SpeedAdjustTool
 from tools.vertical_crop_tool import VerticalCropTool
 from tools.audio_mix_tool import AudioMixTool
 from tools.transcription_tool import TranscriptionTool
+from tools.process_video_tool import ProcessVideoTool
 
 
 class MCPServer:
@@ -42,6 +43,7 @@ class MCPServer:
             VerticalCropTool(),
             AudioMixTool(),
             TranscriptionTool(),
+            ProcessVideoTool(),
         ]
         for tool in tools:
             self.registry.register(tool)

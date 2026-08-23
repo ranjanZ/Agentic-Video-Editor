@@ -41,11 +41,12 @@ export interface Version {
   snapshot: Snapshot;
 }
 
-export type ToolId = "silence" | "vertical" | "transcribe";
+export type ToolId = "silence" | "vertical" | "transcribe" | "pipeline";
 export interface ToolConfig {
   silence: { modelSize: string; paddingMs: number };
   vertical: { width: number; height: number; fps: number };
   transcribe: { modelSize: string; language: string; task: "transcribe" | "translate"; wordTimestamps: boolean };
+  pipeline: { maxSegmentMinutes: number; targetDurationSeconds: number; audioVolume: number; verticalMode: boolean; width: number; height: number; fps: number };
 }
 export interface JobState {
   progress: number;
@@ -222,6 +223,7 @@ export function useEditor() {
     silence: { modelSize: "base", paddingMs: 200 },
     vertical: { width: 1080, height: 1920, fps: 30 },
     transcribe: { modelSize: "base", language: "", task: "transcribe", wordTimestamps: true },
+    pipeline: { maxSegmentMinutes: 20, targetDurationSeconds: 29, audioVolume: 0.4, verticalMode: true, width: 1080, height: 1920, fps: 30 },
   });
 
   const toMediaUrl = (path: string) => {
@@ -479,17 +481,71 @@ export function useEditor() {
             [850, target === "9:16" ? "center-reframing shots…" : "restoring full frame…"],
             [750, target === "9:16" ? "rendering safe-area pass…" : "re-checking composition…"],
           ],
-          () => {
+          async () => {
+            if (target === "9:16") {
+              const stem = videoPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") || "video";
+              const outputPath = `data/output/${stem}_vertical_9x16.mp4`;
+              try {
+                const response = await fetch("/api/tools/vertical_crop", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    video_path: videoPath,
+                    output_path: outputPath,
+                    width: toolConfig.vertical.width,
+                    height: toolConfig.vertical.height,
+                    fps: toolConfig.vertical.fps,
+                  }),
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || "Vertical conversion failed");
+                setOutputVideoPath(result.output_path || outputPath);
+                log("ok", `vertical conform ready · output → ${result.output_path || outputPath}`);
+              } catch (error) {
+                log("err", `vertical conversion failed · ${error instanceof Error ? error.message : "unknown error"}`);
+                return;
+              }
+            }
             const snapshot: Snapshot = { clips: state.clips, aspect: target, captions: state.captions };
             dispatch({ type: "apply", snapshot });
             pushVersion(target === "9:16" ? "vertical 9:16" : "landscape 16:9", snapshot);
-            if (target === "9:16") {
-              const out = videoPath.replace(/(\.\w+)?$/, "_vertical_9x16.mkv").replace("data/input", "data/output");
-              setOutputVideoPath(out);
-              log("ok", `vertical conform ready · output → ${out}`);
-            } else {
+            if (target !== "9:16") {
               setOutputVideoPath(null);
               log("ok", "conformed back to 16:9 · full frame restored on program out");
+            }
+          },
+        );
+      } else if (id === "pipeline") {
+        log("tool", `process_video_pipeline(video="${videoPath}", audio="${audioPath}", target=${toolConfig.pipeline.targetDurationSeconds}s)`);
+        runJob(
+          id,
+          [[700, "loading process_video pipeline…"], [900, "splitting and speed-adjusting segments…"], [900, "mixing background music…"], [700, "encoding delivery files…"]],
+          async () => {
+            try {
+              const response = await fetch("/api/tools/process_video_pipeline", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  video_path: videoPath,
+                  audio_path: audioPath,
+                  output_dir: "data/output",
+                  max_segment_duration_minutes: toolConfig.pipeline.maxSegmentMinutes,
+                  target_output_duration_seconds: toolConfig.pipeline.targetDurationSeconds,
+                  audio_volume: toolConfig.pipeline.audioVolume,
+                  vertical_mode: toolConfig.pipeline.verticalMode,
+                  vertical_width: toolConfig.pipeline.width,
+                  vertical_height: toolConfig.pipeline.height,
+                  output_fps: toolConfig.pipeline.fps,
+                  output_format: "mp4",
+                }),
+              });
+              const result = await response.json();
+              if (!response.ok || !result.success) throw new Error(result.error || "Pipeline failed");
+              const output = result.output_path || result.metadata?.output_files?.[0];
+              if (output) setOutputVideoPath(output);
+              log("ok", `pipeline complete · ${result.metadata?.output_files?.length || 0} output file(s)`);
+            } catch (error) {
+              log("err", `pipeline failed · ${error instanceof Error ? error.message : "unknown error"}`);
             }
           },
         );
