@@ -154,6 +154,8 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                         params["model_size"] = silence_config["modelSize"]
                     if silence_config.get("paddingMs") is not None:
                         params["padding_ms"] = silence_config["paddingMs"]
+                    if silence_config.get("thresholdDb") is not None:
+                        params["threshold_db"] = silence_config["thresholdDb"]
                 elif tool_name == "vertical_crop":
                     vertical_config = tool_config.get("vertical", {})
                     for key, config_key in (("width", "width"), ("height", "height"), ("fps", "fps")):

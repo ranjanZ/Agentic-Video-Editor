@@ -43,7 +43,7 @@ export interface Version {
 
 export type ToolId = "silence" | "vertical" | "transcribe" | "pipeline";
 export interface ToolConfig {
-  silence: { modelSize: string; paddingMs: number };
+  silence: { modelSize: string; paddingMs: number; thresholdDb: number };
   vertical: { width: number; height: number; fps: number };
   transcribe: { modelSize: string; language: string; task: "transcribe" | "translate"; wordTimestamps: boolean };
   pipeline: { maxSegmentMinutes: number; targetDurationSeconds: number; audioVolume: number; verticalMode: boolean; width: number; height: number; fps: number };
@@ -51,6 +51,7 @@ export interface ToolConfig {
 export interface JobState {
   progress: number;
   status: string;
+  complete?: boolean;
 }
 
 export interface AgentResult {
@@ -220,7 +221,7 @@ export function useEditor() {
   ]);
   const [outputVideoPath, setOutputVideoPath] = useState<string | null>(null);
   const [toolConfig, setToolConfig] = useState<ToolConfig>({
-    silence: { modelSize: "base", paddingMs: 200 },
+    silence: { modelSize: "base", paddingMs: 200, thresholdDb: -32 },
     vertical: { width: 1080, height: 1920, fps: 30 },
     transcribe: { modelSize: "base", language: "", task: "transcribe", wordTimestamps: true },
     pipeline: { maxSegmentMinutes: 20, targetDurationSeconds: 29, audioVolume: 0.4, verticalMode: true, width: 1080, height: 1920, fps: 30 },
@@ -404,7 +405,7 @@ export function useEditor() {
 
   /* ------------------------------ tools ----------------------------- */
 
-  const busy = Object.keys(jobs).length > 0;
+  const busy = Object.values(jobs).some((job) => !job?.complete);
   const jobTimers = useRef<number[]>([]);
   useEffect(() => () => jobTimers.current.forEach(clearTimeout), []);
 
@@ -416,12 +417,12 @@ export function useEditor() {
     ) => {
       const total = steps.reduce((a, [d]) => a + d, 0);
       let elapsed = 0;
-      setJobs((j) => ({ ...j, [id]: { progress: 0, status: steps[0][1] } }));
+      setJobs((j) => ({ ...j, [id]: { progress: 0, status: steps[0][1], complete: false } }));
       for (const [dur, status] of steps) {
         const at = elapsed;
         jobTimers.current.push(
           window.setTimeout(
-            () => setJobs((j) => ({ ...j, [id]: { progress: Math.min(0.98, at / total), status } })),
+            () => setJobs((j) => ({ ...j, [id]: { progress: Math.min(0.98, at / total), status, complete: false } })),
             30,
           ),
         );
@@ -429,16 +430,8 @@ export function useEditor() {
       }
       jobTimers.current.push(
         window.setTimeout(() => {
-          const t = window.setTimeout(() => {
-            setJobs((j) => {
-              const rest = { ...j };
-              delete rest[id];
-              return rest;
-            });
-            finish();
-          }, 260);
-          jobTimers.current.push(t);
-          setJobs((j) => ({ ...j, [id]: { progress: 1, status: "done" } }));
+          setJobs((j) => ({ ...j, [id]: { progress: 1, status: "complete", complete: true } }));
+          finish();
         }, elapsed),
       );
     },
@@ -449,9 +442,9 @@ export function useEditor() {
     (id: ToolId) => {
       if (busy) return;
       if (id === "silence") {
-        const gaps = detectSilence();
+        const gaps = detectSilence(0.65, toolConfig.silence.thresholdDb);
         const gapTotal = gaps.reduce((a, [x, y]) => a + (y - x), 0);
-        log("tool", `remove_silence(input_path="${audioPath}", model="${toolConfig.silence.modelSize}", padding=${toolConfig.silence.paddingMs}ms)`);
+        log("tool", `remove_silence(input_path="${audioPath}", model="${toolConfig.silence.modelSize}", padding=${toolConfig.silence.paddingMs}ms, threshold=${toolConfig.silence.thresholdDb}dB)`);
         runJob(
           id,
           [
@@ -468,6 +461,24 @@ export function useEditor() {
             setPlayhead(0);
             setSelected(null);
             log("ok", `silence removed · ${gaps.length} gaps (${fmtSec(gapTotal)}) cut · timeline now ${fmtSec(kept)}`);
+            const stem = videoPath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, "") || "video";
+            const outputPath = `data/output/${stem}_no_silence.mp4`;
+            void fetch("/api/tools/silence_removal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                video_path: videoPath,
+                output_path: outputPath,
+                model_size: toolConfig.silence.modelSize,
+                padding_ms: toolConfig.silence.paddingMs,
+                threshold_db: toolConfig.silence.thresholdDb,
+              }),
+            }).then(async (response) => {
+              const result = await response.json();
+              if (!response.ok || !result.success) throw new Error(result.error || "Silence removal render failed");
+              setOutputVideoPath(result.output_path || outputPath);
+              log("ok", `silence removal video ready · output → ${result.output_path || outputPath}`);
+            }).catch((error) => log("err", `silence removal render failed · ${error instanceof Error ? error.message : "unknown error"}`));
           },
         );
       } else if (id === "vertical") {

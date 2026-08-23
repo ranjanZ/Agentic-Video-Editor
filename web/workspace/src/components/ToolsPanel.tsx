@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DEFAULT_AUDIO_PATH, DEFAULT_VIDEO_PATH, Editor, ToolId } from "../state/editor";
 import { detectSilence } from "../engine/media";
 import { IAlert, IBolt, ICaptions, ICheck, IFilm, IHistory, IRatio, IReset, ISpinner, IWave } from "./icons";
@@ -19,7 +19,8 @@ function SectionHead({ icon, title, aside }: { icon: React.ReactNode; title: str
 export default function ToolsPanel({ ed }: { ed: Editor }) {
   const audioValid = AUDIO_RE.test(ed.audioPath.trim());
   const videoValid = VIDEO_RE.test(ed.videoPath.trim());
-  const gapCount = useMemo(() => detectSilence().length, []);
+  const [expandedTool, setExpandedTool] = useState<ToolId | null>(null);
+  const gapCount = useMemo(() => detectSilence(0.65, ed.toolConfig.silence.thresholdDb).length, [ed.toolConfig.silence.thresholdDb]);
   const updateConfig = (tool: "silence" | "vertical" | "transcribe" | "pipeline", values: Record<string, unknown>) => {
     ed.setToolConfig((current) => ({ ...current, [tool]: { ...current[tool], ...values } }));
   };
@@ -71,7 +72,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
       icon: <IWave className="w-4 h-4" />,
       color: "text-amber",
       border: "border-amber/40 bg-amber/10 hover:bg-amber/20",
-      params: [`input_path="${ed.audioPath}"`, `padding=${ed.toolConfig.silence.paddingMs}ms`],
+      params: [`input_path="${ed.audioPath}"`, `gaps under ${ed.toolConfig.silence.thresholdDb} dB`, `padding=${ed.toolConfig.silence.paddingMs}ms`],
       note: `${gapCount} silent gaps found in source`,
       ready: audioValid && ed.clips.length > 0,
       readyHint: "audio path must end in .mp3 or .wav",
@@ -181,6 +182,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
         <div className="flex flex-col gap-2.5">
           {tools.map((t) => {
             const job = ed.jobs[t.id];
+            const expanded = expandedTool === t.id;
             return (
               <div
                 key={t.id}
@@ -188,24 +190,28 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                   job ? "border-line2 shadow-[0_0_24px_rgba(255,178,36,0.06)]" : "hover:border-line2"
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <button className="flex items-center gap-2 w-full text-left" onClick={() => setExpandedTool(expanded ? null : t.id)} aria-expanded={expanded}>
                   <span className={`${t.color}`}>{t.icon}</span>
                   <span className="font-display font-semibold text-[13px]">{t.name}</span>
+                  <span className="ml-auto text-[10px] text-faint">{expanded ? "hide params" : "params"}</span>
+                  <span className="text-faint text-xs">{expanded ? "-" : "+"}</span>
+                </button>
+                {expanded && <>
                   <button
                     className={`tool-run ml-auto ${t.border} ${t.color}`}
                     disabled={!t.ready || ed.busy}
                     onClick={() => ed.runTool(t.id)}
                   >
-                    {job ? "running" : "Run"}
+                    {job?.complete ? "Run again" : job ? "running" : "Run"}
                   </button>
-                </div>
+                </>}
                 <p className="mt-1.5 text-[11px] leading-snug text-dim">{t.desc}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
+                {expanded && <div className="mt-2 flex flex-wrap gap-1">
                   {t.params.map((p) => (
                     <span key={p} className="chip !text-[9.5px]">{p}</span>
                   ))}
-                </div>
-                {t.id === "silence" && (
+                </div>}
+                {expanded && t.id === "silence" && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <label className="text-[9px] text-faint">MODEL
                       <select className="path-input mt-1 !py-1" value={ed.toolConfig.silence.modelSize} onChange={(e) => updateConfig("silence", { modelSize: e.target.value })}>
@@ -215,16 +221,19 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                     <label className="text-[9px] text-faint">PADDING MS
                       <input className="path-input mt-1 !py-1" type="number" min="0" max="2000" step="50" value={ed.toolConfig.silence.paddingMs} onChange={(e) => updateConfig("silence", { paddingMs: Number(e.target.value) || 0 })} />
                     </label>
+                    <label className="col-span-2 text-[9px] text-faint">SILENCE THRESHOLD (DB)
+                      <input className="path-input mt-1 !py-1" type="number" min="-60" max="0" step="1" value={ed.toolConfig.silence.thresholdDb} onChange={(e) => updateConfig("silence", { thresholdDb: Number(e.target.value) || -32 })} />
+                    </label>
                   </div>
                 )}
-                {t.id === "vertical" && (
+                {expanded && t.id === "vertical" && (
                   <div className="mt-2 grid grid-cols-3 gap-2">
                     <label className="text-[9px] text-faint">WIDTH<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.vertical.width} onChange={(e) => updateConfig("vertical", { width: Number(e.target.value) || 144 })} /></label>
                     <label className="text-[9px] text-faint">HEIGHT<input className="path-input mt-1 !py-1" type="number" min="144" value={ed.toolConfig.vertical.height} onChange={(e) => updateConfig("vertical", { height: Number(e.target.value) || 144 })} /></label>
                     <label className="text-[9px] text-faint">FPS<input className="path-input mt-1 !py-1" type="number" min="1" max="120" value={ed.toolConfig.vertical.fps} onChange={(e) => updateConfig("vertical", { fps: Number(e.target.value) || 1 })} /></label>
                   </div>
                 )}
-                {t.id === "transcribe" && (
+                {expanded && t.id === "transcribe" && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <label className="text-[9px] text-faint">MODEL
                       <select className="path-input mt-1 !py-1" value={ed.toolConfig.transcribe.modelSize} onChange={(e) => updateConfig("transcribe", { modelSize: e.target.value })}>
@@ -242,7 +251,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                     <label className="col-span-2 flex items-center gap-2 text-[10px] text-faint"><input type="checkbox" checked={ed.toolConfig.transcribe.wordTimestamps} onChange={(e) => updateConfig("transcribe", { wordTimestamps: e.target.checked })} /> word-level timestamps</label>
                   </div>
                 )}
-                {t.id === "pipeline" && (
+                {expanded && t.id === "pipeline" && (
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <label className="text-[9px] text-faint">SEGMENT MIN<input className="path-input mt-1 !py-1" type="number" min="0.1" value={ed.toolConfig.pipeline.maxSegmentMinutes} onChange={(e) => updateConfig("pipeline", { maxSegmentMinutes: Number(e.target.value) || 0.1 })} /></label>
                     <label className="text-[9px] text-faint">TARGET SEC<input className="path-input mt-1 !py-1" type="number" min="1" value={ed.toolConfig.pipeline.targetDurationSeconds} onChange={(e) => updateConfig("pipeline", { targetDurationSeconds: Number(e.target.value) || 1 })} /></label>
@@ -258,7 +267,7 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                 {job ? (
                   <div className="mt-2.5">
                     <div className="flex items-center gap-2 text-[10px] font-mono text-dim">
-                      <ISpinner className={`w-3 h-3 ${t.color}`} />
+                      {job.complete ? <ICheck className={`w-3 h-3 ${t.color}`} /> : <ISpinner className={`w-3 h-3 ${t.color}`} />}
                       <span className="truncate">{job.status}</span>
                       <span className={`ml-auto ${t.color}`}>{Math.round(job.progress * 100)}%</span>
                     </div>
@@ -283,6 +292,11 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
                       </>
                     )}
                   </p>
+                )}
+                {ed.outputVideoPath && (
+                  <a className="btn btn-amber mt-2 w-full justify-center !py-1.5" href={ed.outputVideoPath.replace(/^.*?data[\\/]/, "/data/").replace(/\\/g, "/")} download>
+                    Download current video
+                  </a>
                 )}
               </div>
             );

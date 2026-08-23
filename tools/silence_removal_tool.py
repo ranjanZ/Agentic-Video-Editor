@@ -51,6 +51,13 @@ class SilenceRemovalTool(BaseTool):
                     "description": "Padding in milliseconds around speech segments",
                     "default": 200
                 },
+                "threshold_db": {
+                    "type": "number",
+                    "description": "Treat audio below this level as silence in decibels",
+                    "default": -32,
+                    "minimum": -60,
+                    "maximum": 0
+                },
                 "task": {
                     "type": "string",
                     "description": "Transcription task",
@@ -68,6 +75,7 @@ class SilenceRemovalTool(BaseTool):
         output_dir: Optional[str] = None,
         model_size: str = "base",
         padding_ms: int = 200,
+        threshold_db: float = -32,
         task: str = "translate",
         **kwargs
     ) -> ToolResult:
@@ -187,6 +195,7 @@ class SilenceRemovalTool(BaseTool):
                     "segments": segments,
                     "kept_segments": kept_segments,
                     "padding_ms": padding_ms,
+                    "threshold_db": threshold_db,
                 }
             )
             

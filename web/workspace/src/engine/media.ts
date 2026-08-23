@@ -101,14 +101,16 @@ export function buildPeaks(step = 0.035): number[] {
 export const PEAKS = buildPeaks();
 export const PEAK_STEP = SOURCE_DURATION / PEAKS.length;
 export const SILENCE_THRESHOLD = 0.07;
+export const DEFAULT_SILENCE_THRESHOLD_DB = -32;
 
 /** Detect contiguous silence stretches (>= minLen seconds). */
-export function detectSilence(minLen = 0.65): Array<[number, number]> {
+export function detectSilence(minLen = 0.65, thresholdDb = DEFAULT_SILENCE_THRESHOLD_DB): Array<[number, number]> {
+  const threshold = Math.pow(10, thresholdDb / 20);
   const gaps: Array<[number, number]> = [];
   let start: number | null = null;
   for (let i = 0; i < PEAKS.length; i++) {
     const t = i * PEAK_STEP;
-    if (PEAKS[i] < SILENCE_THRESHOLD) {
+    if (PEAKS[i] < threshold) {
       if (start === null) start = t;
     } else if (start !== null) {
       if (t - start >= minLen) gaps.push([start, t]);
