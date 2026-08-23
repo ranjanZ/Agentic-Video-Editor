@@ -16,14 +16,9 @@ import threading
 import uuid
 
 from tools.base_tool import ToolRegistry
-from tools.video_split_tool import VideoSplitTool
-from tools.silence_removal_tool import SilenceRemovalTool
-from tools.transcription_tool import TranscriptionTool
-from tools.speed_adjust_tool import SpeedAdjustTool
-from tools.vertical_crop_tool import VerticalCropTool
-from tools.audio_mix_tool import AudioMixTool
+from mcp.server import get_mcp_server
 
-from agents.video_editing_agent import VideoEditingAgent
+from agents.llm_agent import get_llm_agent
 from agents.workflow_agent import WorkflowAgent
 
 
@@ -49,37 +44,18 @@ def create_app(config=None):
     for folder in [app.config['UPLOAD_FOLDER'], app.config['OUTPUT_FOLDER'], app.config['TEMP_FOLDER']]:
         os.makedirs(folder, exist_ok=True)
     
-    # Initialize tool registry
-    tool_registry = ToolRegistry()
-    tool_registry.register(VideoSplitTool())
-    tool_registry.register(SilenceRemovalTool())
-    tool_registry.register(TranscriptionTool())
-    tool_registry.register(SpeedAdjustTool())
-    tool_registry.register(VerticalCropTool())
-    tool_registry.register(AudioMixTool())
+    # Initialize MCP server (which initializes tool registry internally)
+    mcp_server = get_mcp_server()
+    tool_registry = mcp_server.registry
     
-    # Initialize agents
-    video_agent = VideoEditingAgent(tools={
-        'video_split': VideoSplitTool(),
-        'silence_removal': SilenceRemovalTool(),
-        'transcription': TranscriptionTool(),
-        'speed_adjust': SpeedAdjustTool(),
-        'vertical_crop': VerticalCropTool(),
-        'audio_mix': AudioMixTool(),
-    })
-    
-    workflow_agent = WorkflowAgent(tools={
-        'video_split': VideoSplitTool(),
-        'silence_removal': SilenceRemovalTool(),
-        'transcription': TranscriptionTool(),
-        'speed_adjust': SpeedAdjustTool(),
-        'vertical_crop': VerticalCropTool(),
-        'audio_mix': AudioMixTool(),
-    })
+    # Initialize agents with shared tool registry via MCP server
+    llm_agent = get_llm_agent()  # Uses MCP server internally
+    workflow_agent = WorkflowAgent(mcp_server=mcp_server)
     
     # Store in app context
+    app.mcp_server = mcp_server
     app.tool_registry = tool_registry
-    app.video_agent = video_agent
+    app.llm_agent = llm_agent
     app.workflow_agent = workflow_agent
     app.active_jobs = {}
     
@@ -98,7 +74,9 @@ def create_app(config=None):
     @app.route('/<path:filename>')
     def serve_workspace_static_files(filename):
         """Serve workspace static files (JS, CSS)."""
-        if filename.endswith('.js') or filename.endswith('.css'):
+        # Check if file exists in workspace folder
+        file_path = os.path.join(app.workspace_folder, filename)
+        if os.path.exists(file_path):
             return send_from_directory(app.workspace_folder, filename)
         return jsonify({'error': 'File not found'}), 404
     
@@ -174,7 +152,7 @@ def create_app(config=None):
     def agent_status():
         """Get agent status."""
         return jsonify({
-            'video_agent': app.video_agent.get_status(),
+            'llm_agent': app.llm_agent.get_status(),
             'workflow_agent': app.workflow_agent.get_status()
         })
     

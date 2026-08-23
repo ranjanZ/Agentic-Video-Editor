@@ -20,7 +20,7 @@ An AI-powered agentic video editing platform that combines automated video proce
 - **Interactive Chat**: Get suggestions and confirmations before execution
 
 ### Web Interface
-- **Chat Agent Interface** (`/`): Modern chat-focused UI for interacting with the AI agent
+- **Chat Agent Interface** (`/` or `/workspace`): Modern chat-focused UI for interacting with the AI agent
 - Modular JavaScript architecture with separate modules for chat, video processing, and app logic
 - Drag-and-drop file upload
 - Real-time chat with AI agent
@@ -154,7 +154,9 @@ The server will start on `http://localhost:5000`.
 
 Open your browser and navigate to:
 - **Main Interface**: http://localhost:5000
-- **Workspace** (same): http://localhost:5000/workspace
+- **Workspace**: http://localhost:5000/workspace
+
+Both URLs serve the same chat agent interface built in `web/workspace/`.
 
 ### Using the Chat Agent
 
@@ -188,7 +190,7 @@ Open your browser and navigate to:
 
 ### MCP Server Pattern
 
-The system uses an MCP (Model Context Protocol) server to expose video editing tools:
+The system uses a centralized MCP (Model Context Protocol) server to expose video editing tools:
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐
@@ -200,6 +202,18 @@ The system uses an MCP (Model Context Protocol) server to expose video editing t
                     │  Tool Registry│
                     └──────────────┘
 ```
+
+### Modular Design
+
+All components are designed to be modular and reusable:
+
+1. **Tools** (`tools/`): Each video editing operation is a standalone tool with a consistent interface
+2. **MCP Server** (`mcp/server.py`): Central registry that exposes all tools via a unified API
+3. **Agents** (`agents/`): 
+   - `LLMAgent`: Uses Ollama LLM to understand natural language and call tools via MCP
+   - `WorkflowAgent`: Executes predefined multi-step workflows
+4. **API Server** (`api/server.py`): Flask backend that integrates MCP server and agents
+5. **Web Interface** (`web/workspace/`): Modular JavaScript frontend with separate concerns
 
 ### Tool Flow
 
@@ -239,11 +253,17 @@ class MyNewTool(BaseTool):
         return ToolResult(success=True, output_path="output.mp4")
 ```
 
-Then register it in `api/server.py`:
+Then register it in `mcp/server.py`:
 ```python
 from tools.my_new_tool import MyNewTool
 
-tool_registry.register(MyNewTool())
+def _register_default_tools(self):
+    tools = [
+        # ... existing tools ...
+        MyNewTool(),
+    ]
+    for tool in tools:
+        self.registry.register(tool)
 ```
 
 ## Configuration
