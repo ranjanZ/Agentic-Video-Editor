@@ -1,4 +1,4 @@
-# Antigenic Video Editor
+# Antigenic Video Editor - AI Agent Based Video Editor
 
 An AI-powered agentic video editing platform that combines automated video processing with intelligent agents for natural language control. The system uses an MCP (Model Context Protocol) server architecture to expose video editing tools that can be called by AI agents.
 
@@ -20,8 +20,8 @@ An AI-powered agentic video editing platform that combines automated video proce
 - **Interactive Chat**: Get suggestions and confirmations before execution
 
 ### Web Interface
-- **Main Interface** (`/`): Full-featured UI with all capabilities
-- **Workspace Chat Interface** (`/workspace`): Modular chat-focused interface with separate JS modules
+- **Chat Agent Interface** (`/`): Modern chat-focused UI for interacting with the AI agent
+- Modular JavaScript architecture with separate modules for chat, video processing, and app logic
 - Drag-and-drop file upload
 - Real-time chat with AI agent
 - Workflow templates
@@ -41,7 +41,7 @@ antigenic-video-editor/
 ├── tools/                   # Modular tool implementations
 │   ├── __init__.py
 │   ├── base_tool.py         # Base tool class and registry
-│   ├── video_split_tool.py
+│   ├── video_split_tool.py  # Split video into segments
 │   ├── silence_removal_tool.py
 │   ├── transcription_tool.py
 │   ├── speed_adjust_tool.py
@@ -51,96 +51,129 @@ antigenic-video-editor/
 ├── agents/                  # AI agent implementations
 │   ├── __init__.py
 │   ├── base_agent.py        # Base agent class
-│   ├── video_editing_agent.py  # Main editing agent
+│   ├── llm_agent.py         # LLM-powered agent using Ollama
+│   ├── video_editing_agent.py
 │   └── workflow_agent.py    # Workflow orchestration agent
+│
+├── mcp/                     # MCP Server implementation
+│   ├── __init__.py
+│   └── server.py            # MCP-compatible tool server
+│
+├── llm/                     # LLM services
+│   ├── __init__.py
+│   └── ollama_service.py    # Ollama integration
 │
 ├── api/                     # REST API server
 │   ├── __init__.py
 │   └── server.py            # Flask API endpoints
 │
 ├── web/                     # Web interface
-│   ├── templates/
-│   │   └── index.html       # Main web UI
-│   ├── workspace/           # Modular chat interface
-│   │   ├── index.html       # Workspace chat UI
-│   │   ├── chat_agent.js    # Chat agent client module
-│   │   ├── video_processor.js # Video processing client module
-│   │   └── app.js           # Main application logic
-│   └── static/              # Static assets (CSS, images)
-│
-├── config/                  # Configuration files
-│   └── default_config.yaml
+│   └── workspace/           # Chat agent interface
+│       ├── index.html       # Main chat UI
+│       ├── chat_agent.js    # Chat agent client module
+│       ├── video_processor.js # Video processing client module
+│       └── app.js           # Main application logic
 │
 ├── data/                    # Data directories
 │   ├── input/               # Uploaded files
 │   ├── output/              # Processed outputs
 │   └── temp/                # Temporary files
 │
-├── tests/                   # Test suite
-├── docs/                    # Documentation
-└── scripts/                 # Utility scripts
+├── config/                  # Configuration files
+│   └── default_config.yaml
+│
+├── run.py                   # Main entry point
+└── requirements.txt         # Python dependencies
 ```
 
 ## Installation
 
 ### Prerequisites
-- Python 3.8+
-- FFmpeg
-- Node.js (optional, for development)
 
-### Install Dependencies
+1. **Python 3.8+**
+2. **FFmpeg** - Required for video processing
+3. **Ollama** - For running the LLM agent locally
+
+### Install FFmpeg
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y ffmpeg
+```
+
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+**Windows:**
+Download from https://ffmpeg.org/download.html or use chocolatey:
+```bash
+choco install ffmpeg
+```
+
+### Install Ollama
+
+**Linux/macOS:**
+```bash
+curl -fsSL https://ollama.ai/install.sh | sh
+```
+
+**Windows:**
+Download from https://ollama.ai/download
+
+### Pull the LLM Model
 
 ```bash
-pip install moviepy openai-whisper flask flask-cors pydub pyyaml
+ollama pull qwen2.5:1.5b-instruct-q4_K_M
+```
+
+Or use any other model:
+```bash
+ollama pull llama3.2:1b
+```
+
+### Install Python Dependencies
+
+```bash
+cd antigenic-video-editor
+pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Prerequisites
+### Start the Server
 
-1. **Install Python dependencies:**
 ```bash
-pip install -r requirements.txt
+python run.py
 ```
 
-2. **Install FFmpeg** (required for video processing):
-```bash
-# Ubuntu/Debian
-sudo apt-get install ffmpeg
+The server will start on `http://localhost:5000`.
 
-# macOS
-brew install ffmpeg
+### Access the Chat Interface
 
-# Windows
-# Download from https://ffmpeg.org/download.html
-```
+Open your browser and navigate to:
+- **Main Interface**: http://localhost:5000
+- **Workspace** (same): http://localhost:5000/workspace
 
-3. **Install Ollama and pull the LLM model** (for AI agent features):
-```bash
-# Install Ollama from https://ollama.ai
-ollama pull qwen2.5:1.5b-instruct-q4_K_M
-```
+### Using the Chat Agent
 
-### Running the Application
+1. **Upload Files**: Drag and drop video/audio files into the upload zone
+2. **Describe Your Task**: Type your video editing request in natural language
+   - Example: "Split my video into shorts and add background music"
+   - Example: "Remove silence from my video"
+   - Example: "Convert this to vertical format for TikTok"
+3. **View Results**: The agent will process your request and show the output video
 
-#### Option 1: Main Web Interface
-```bash
-python -m api.server
-```
-Then open http://localhost:5000 in your browser.
+### Example Commands
 
-#### Option 2: Workspace Chat Interface (Modular)
-```bash
-python -m api.server
-```
-Then open http://localhost:5000/workspace in your browser.
+- "Split my video into 30-second segments with background music"
+- "Remove all silent parts from the video"
+- "Make this video vertical for Instagram Reels"
+- "Add this audio track as background music at 40% volume"
+- "Transcribe the speech in my video"
 
-The workspace interface provides a cleaner, modular architecture with separate JavaScript modules:
-- `chat_agent.js` - Handles communication with the AI agent
-- `video_processor.js` - Manages tool execution and file uploads
-- `app.js` - Main application logic integrating all modules
-
-### API Endpoints
+## API Endpoints
 
 - `GET /api/health` - Health check
 - `GET /api/tools` - List available tools
@@ -149,85 +182,112 @@ The workspace interface provides a cleaner, modular architecture with separate J
 - `GET /api/workflows` - List workflows
 - `POST /api/workflows/<name>` - Execute a workflow
 - `POST /api/upload` - Upload files
-- `GET /workspace/` - Access the modular chat interface
-- `GET /workspace/<filename>` - Access workspace JavaScript modules
+- `GET /data/output/<filename>` - Access processed output files
 
-### Example: Using the Agent
+## Architecture
 
-```python
-from agents.video_editing_agent import VideoEditingAgent
-from tools.video_split_tool import VideoSplitTool
-from tools.silence_removal_tool import SilenceRemovalTool
+### MCP Server Pattern
 
-# Create agent with tools
-agent = VideoEditingAgent(tools={
-    'video_split': VideoSplitTool(),
-    'silence_removal': SilenceRemovalTool(),
-})
+The system uses an MCP (Model Context Protocol) server to expose video editing tools:
 
-# Process natural language request
-response = agent.process("Split my video into shorts and remove silence")
-print(response.content)
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│  LLM Agent  │────▶│  MCP Server  │────▶│ Video Tools │
+└─────────────┘     └──────────────┘     └─────────────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  Tool Registry│
+                    └──────────────┘
 ```
 
-### Example: Using Tools Directly
+### Tool Flow
 
-```python
-from tools.silence_removal_tool import SilenceRemovalTool
+1. User sends natural language request via chat interface
+2. LLM Agent parses the request and identifies required tools
+3. Agent calls MCP server with tool name and parameters
+4. MCP server validates parameters and executes the tool
+5. Results are returned to the agent
+6. Agent formats response and sends back to user
 
-tool = SilenceRemovalTool()
-result = tool.execute(
-    video_path="input.mp4",
-    output_path="output.mp4",
-    model_size="base"
-)
-
-if result.success:
-    print(f"Done! Output: {result.output_path}")
-else:
-    print(f"Error: {result.error}")
-```
-
-## Adding New Features
-
-### Creating a New Tool
+### Adding New Tools
 
 ```python
 from tools.base_tool import BaseTool, ToolResult
 
 class MyNewTool(BaseTool):
     @property
-    def name(self): return "my_tool"
-    
+    def name(self): 
+        return "my_tool"
+
     @property
-    def description(self): return "Does something useful"
-    
-    def execute(self, **kwargs) -> ToolResult:
+    def description(self): 
+        return "Does something useful"
+
+    @property
+    def input_schema(self):
+        return {
+            "type": "object",
+            "properties": {
+                "param1": {"type": "string", "description": "A parameter"}
+            },
+            "required": ["param1"]
+        }
+
+    def execute(self, param1: str, **kwargs) -> ToolResult:
         # Your implementation
-        return ToolResult(success=True, output_path="...")
+        return ToolResult(success=True, output_path="output.mp4")
 ```
 
-### Creating a New Agent
-
+Then register it in `api/server.py`:
 ```python
-from agents.base_agent import BaseAgent, AgentMessage
+from tools.my_new_tool import MyNewTool
 
-class MyAgent(BaseAgent):
-    @property
-    def name(self): return "my_agent"
-    
-    def process(self, user_input: str) -> AgentMessage:
-        # Your implementation
-        return AgentMessage(role="assistant", content="Response")
+tool_registry.register(MyNewTool())
 ```
 
-## Architecture Principles
+## Configuration
 
-1. **Modularity**: Each tool is self-contained and independently testable
-2. **Composability**: Tools can be chained together by agents
-3. **Extensibility**: Easy to add new tools and agents
-4. **Scalability**: Clear separation between core logic, agents, and interfaces
-5. **Agentic Design**: Natural language understanding drives automation
+### Environment Variables
+
+- `OLLAMA_HOST`: Ollama server host (default: http://localhost:11434)
+- `LLM_MODEL`: Model to use (default: qwen2.5:1.5b-instruct-q4_K_M)
+
+### Default Paths
+
+- Upload folder: `data/input/`
+- Output folder: `data/output/`
+- Temp folder: `data/temp/`
+
+## Troubleshooting
+
+### Ollama Not Running
+
+```bash
+ollama serve
+```
+
+### FFmpeg Not Found
+
+Ensure FFmpeg is installed and in your PATH:
+```bash
+which ffmpeg  # Linux/macOS
+where ffmpeg  # Windows
+```
+
+### Model Not Found
+
+Pull the required model:
+```bash
+ollama pull qwen2.5:1.5b-instruct-q4_K_M
+```
+
+### Port Already in Use
+
+Change the port in `run.py`:
+```python
+run_server(host='0.0.0.0', port=8080, debug=True)
+```
 
 ## License
 
