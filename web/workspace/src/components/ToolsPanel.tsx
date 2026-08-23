@@ -21,6 +21,17 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
   const videoValid = VIDEO_RE.test(ed.videoPath.trim());
   const gapCount = useMemo(() => detectSilence().length, []);
 
+  const upload = async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const response = await fetch("/api/upload", { method: "POST", body: form });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Upload failed");
+    const path = data.path as string;
+    if (AUDIO_RE.test(path)) ed.setAudioPath(path);
+    if (VIDEO_RE.test(path)) ed.setVideoPath(path);
+  };
+
   const tools: Array<{
     id: ToolId;
     name: string;
@@ -104,6 +115,15 @@ export default function ToolsPanel({ ed }: { ed: Editor }) {
             spellCheck={false}
             onChange={(e) => ed.setVideoPath(e.target.value)}
             placeholder={DEFAULT_VIDEO_PATH}
+          />
+        </label>
+        <label className="btn w-full justify-center mt-2 cursor-pointer">
+          Load media file
+          <input
+            type="file"
+            className="hidden"
+            accept="video/*,audio/*"
+            onChange={(e) => e.target.files?.[0] && upload(e.target.files[0]).catch((error) => ed.log("err", error.message))}
           />
         </label>
         <p className="mt-2.5 flex gap-1.5 items-start text-[10px] leading-relaxed text-faint">

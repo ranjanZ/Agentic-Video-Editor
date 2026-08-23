@@ -64,7 +64,7 @@ class MCPServer:
         if not tool:
             return None
         return {
-            "name": name,
+            "name": tool_name,
             "description": tool.description,
             "inputSchema": tool.input_schema,
             "outputSchema": tool.output_schema,

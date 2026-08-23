@@ -14,6 +14,7 @@ import {
 } from "./icons";
 
 export default function Monitor({ ed }: { ed: Editor }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const tcMainRef = useRef<HTMLSpanElement>(null);
   const tcSrcRef = useRef<HTMLSpanElement>(null);
@@ -60,6 +61,15 @@ export default function Monitor({ ed }: { ed: Editor }) {
   }, []);
 
   const vertical = ed.aspect === "9:16";
+  const toMediaUrl = (path: string) => {
+    const dataPath = path.replace(/^.*?data[\\/]/, "").replace(/\\/g, "/");
+    return `/data/${dataPath}`;
+  };
+  const outputUrl = ed.outputVideoPath ? toMediaUrl(ed.outputVideoPath) : null;
+  const browserPlayableSource = /\.(mp4|webm|mov)$/i.test(ed.videoPath);
+  const sourceUrl = browserPlayableSource
+    ? toMediaUrl(ed.videoPath)
+    : `/api/media/preview/${encodeURIComponent(ed.videoPath.split(/[\\/]/).pop() || "source.mkv")}`;
 
   return (
     <section className="panel overflow-hidden anim-rise">
@@ -95,12 +105,22 @@ export default function Monitor({ ed }: { ed: Editor }) {
             maxWidth: vertical ? "none" : "100%",
           }}
         >
-          <canvas
-            ref={canvasRef}
-            width={vertical ? 540 : 960}
-            height={vertical ? 960 : 540}
-            className="w-full h-full block rounded-md shadow-[0_0_60px_rgba(0,0,0,0.6)]"
-          />
+          {outputUrl || browserPlayableSource ? (
+            <video
+              ref={videoRef}
+              src={outputUrl || sourceUrl}
+              controls
+              className="w-full h-full block rounded-md shadow-[0_0_60px_rgba(0,0,0,0.6)] object-contain bg-black"
+              onTimeUpdate={(event) => ed.setPlayhead(event.currentTarget.currentTime)}
+            />
+          ) : (
+            <canvas
+              ref={canvasRef}
+              width={vertical ? 540 : 960}
+              height={vertical ? 960 : 540}
+              className="w-full h-full block rounded-md shadow-[0_0_60px_rgba(0,0,0,0.6)]"
+            />
+          )}
           {/* corner frame marks */}
           <div className="pointer-events-none absolute inset-0 rounded-md ring-1 ring-white/10" />
         </div>
@@ -108,6 +128,11 @@ export default function Monitor({ ed }: { ed: Editor }) {
 
       {/* transport */}
       <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t border-line bg-bg1/60">
+        {outputUrl && (
+          <a className="btn btn-amber" href={outputUrl} download title="Download the current Program Out video">
+            Download output
+          </a>
+        )}
         <div className="flex items-center gap-1">
           <button className="btn btn-ghost btn-icon" onClick={() => ed.skip("start")} title="Go to start">
             <ISkipStart className="w-4 h-4" />

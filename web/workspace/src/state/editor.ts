@@ -170,6 +170,7 @@ export function useEditor() {
   const [jobs, setJobs] = useState<Partial<Record<ToolId, JobState>>>({});
   const [audioPath, setAudioPath] = useState(DEFAULT_AUDIO_PATH);
   const [videoPath, setVideoPath] = useState(DEFAULT_VIDEO_PATH);
+  const [outputVideoPath, setOutputVideoPath] = useState<string | null>(null);
 
   const totalDuration = useMemo(
     () => state.clips.reduce((a, c) => a + c.dur, 0),
@@ -488,6 +489,7 @@ export function useEditor() {
     showCaptions,
     setShowCaptions,
     logs,
+    log,
     versions,
     jobs,
     busy,
@@ -495,6 +497,8 @@ export function useEditor() {
     setAudioPath,
     videoPath,
     setVideoPath,
+    outputVideoPath,
+    setOutputVideoPath,
     totalDuration,
     canUndo,
     canRedo,

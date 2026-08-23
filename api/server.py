@@ -14,6 +14,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import threading
 import uuid
+from core.video_utils import VideoFileClip
 
 from tools.base_tool import ToolRegistry
 from mcp.server import get_mcp_server
@@ -124,6 +125,22 @@ def create_app(config=None):
             return jsonify({'error': 'Invalid folder type'}), 400
         
         return send_from_directory(folder, filename)
+
+    @app.route('/api/media/preview/<path:filename>', methods=['GET'])
+    def media_preview(filename):
+        """Transcode non-browser video containers to a cached MP4 preview."""
+        source = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.isfile(source):
+            return jsonify({'error': 'Media file not found'}), 404
+        preview_name = f"preview_{secure_filename(filename)}.mp4"
+        preview = os.path.join(app.config['TEMP_FOLDER'], preview_name)
+        if not os.path.exists(preview):
+            clip = VideoFileClip(source)
+            try:
+                clip.write_videofile(preview, codec='libx264', audio_codec='aac', logger=None)
+            finally:
+                clip.close()
+        return send_from_directory(app.config['TEMP_FOLDER'], preview_name, mimetype='video/mp4')
     
     @app.route('/api/tools', methods=['GET'])
     def list_tools():
@@ -215,6 +232,8 @@ def create_app(config=None):
         return jsonify({
             'success': True,
             'filepath': filepath,
+            'path': os.path.join('data', 'input', unique_filename),
+            'url': f'/data/input/{unique_filename}',
             'filename': filename
         })
     

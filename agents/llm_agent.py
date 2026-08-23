@@ -121,6 +121,16 @@ Always be helpful and concise. If you execute a tool, report the output_path so 
                         params["audio_path"] = context["audio_path"]
                     if "output_dir" not in params and context.get("output_dir"):
                         params["output_dir"] = context["output_dir"]
+
+                # Video tools need a concrete destination, not just a directory.
+                if tool_name in {"vertical_crop", "silence_removal", "speed_adjust", "audio_mix"}:
+                    if not params.get("output_path"):
+                        import os
+                        source = params.get("video_path") or params.get("input_path") or "edited_video.mp4"
+                        stem = os.path.splitext(os.path.basename(source))[0]
+                        suffix = "_vertical_9x16" if tool_name == "vertical_crop" else f"_{tool_name}"
+                        output_dir = params.get("output_dir") or "data/output"
+                        params["output_path"] = os.path.join(output_dir, f"{stem}{suffix}.mp4")
                 
                 # Validate required parameters for video_split tool
                 if tool_name == "video_split":
