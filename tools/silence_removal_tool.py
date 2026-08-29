@@ -214,7 +214,8 @@ class SilenceRemovalTool(BaseTool):
                 )
             
             report_progress(0.88, "Concatenating video segments...")
-            final_clip = concatenate_videoclips(speech_clips, method="compose")
+            # Use 'chain' method for much faster concatenation (no re-encoding during concat)
+            final_clip = concatenate_videoclips(speech_clips, method="chain")
             original_duration = video.duration or 0
             
             # Determine number of CPU cores to use for encoding
@@ -223,14 +224,16 @@ class SilenceRemovalTool(BaseTool):
             # Use ffmpeg threads for faster encoding (leave 1 core free for system)
             ffmpeg_threads = max(1, n_cores - 1)
             
-            report_progress(0.92, f"Writing output video to {output_path} (using {ffmpeg_threads} threads)...")
+            report_progress(0.92, f"Writing output video to {output_path} (using {ffmpeg_threads} threads, fast preset)...")
             final_clip.write_videofile(
                 output_path, 
                 codec="libx264", 
                 audio_codec="aac", 
                 logger=None,
                 threads=ffmpeg_threads,  # Enable multi-threading
-                preset="medium"  # Good balance between speed and quality
+                preset="fast",  # Fast encoding preset (much faster than medium)
+                bitrate="2000k",  # Reasonable bitrate to balance quality/speed
+                audio_bitrate="128k"
             )
             
             # Cleanup
