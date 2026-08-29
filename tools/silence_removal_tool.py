@@ -208,3 +208,35 @@ class SilenceRemovalTool(BaseTool):
                 metadata={"stage": "silence_removal"}
             )
 
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Remove silent portions from video using Whisper")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--output", type=str, default="data/output/no_silence_output.mp4", help="Path to output video")
+    parser.add_argument("--model", type=str, default="base", choices=["tiny", "base", "small", "medium", "large"], help="Whisper model size")
+    parser.add_argument("--padding-ms", type=int, default=200, help="Padding in milliseconds around speech segments")
+    parser.add_argument("--threshold-db", type=float, default=-32, help="Silence threshold in decibels")
+    parser.add_argument("--task", type=str, default="translate", choices=["transcribe", "translate"], help="Transcription task")
+    
+    args = parser.parse_args()
+    
+    tool = SilenceRemovalTool()
+    result = tool.execute(
+        video_path=args.video,
+        output_path=args.output,
+        model_size=args.model,
+        padding_ms=args.padding_ms,
+        threshold_db=args.threshold_db,
+        task=args.task
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output: {result.output_path}")
+        print(f"Original duration: {result.metadata.get('original_duration', 0):.2f}s")
+        print(f"New duration: {result.metadata.get('new_duration', 0):.2f}s")
+    else:
+        print(f"Error: {result.error}")
+

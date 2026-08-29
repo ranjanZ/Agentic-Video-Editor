@@ -252,3 +252,35 @@ class VideoSplitTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "video_split"}
             )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Split video into segments with speed-up and background music")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--audio", type=str, default="data/input/input_audio.mp3", help="Path to background audio")
+    parser.add_argument("--output-dir", type=str, default="data/output", help="Output directory")
+    parser.add_argument("--max-segment-minutes", type=float, default=20, help="Max segment duration in minutes")
+    parser.add_argument("--target-duration", type=float, default=29, help="Target output duration in seconds")
+    parser.add_argument("--vertical", action="store_true", default=True, help="Convert to vertical format")
+    parser.add_argument("--audio-volume", type=float, default=0.4, help="Background music volume")
+    
+    args = parser.parse_args()
+    
+    tool = VideoSplitTool()
+    result = tool.execute(
+        video_path=args.video,
+        audio_path=args.audio,
+        output_dir=args.output_dir,
+        max_segment_duration_minutes=args.max_segment_minutes,
+        target_output_duration_seconds=args.target_duration,
+        vertical_mode=args.vertical,
+        audio_volume=args.audio_volume
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output files: {result.metadata.get('output_files', [])}")
+    else:
+        print(f"Error: {result.error}")

@@ -41,3 +41,41 @@ class ProcessVideoTool(VideoSplitTool):
 
     def execute(self, **kwargs: Any) -> ToolResult:
         return super().execute(**kwargs)
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Complete video processing pipeline: split, speed-up, background music")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--audio", type=str, default="data/input/input_audio.mp3", help="Path to background audio")
+    parser.add_argument("--output-dir", type=str, default="data/output", help="Output directory")
+    parser.add_argument("--max-segment-minutes", type=float, default=20, help="Max segment duration in minutes")
+    parser.add_argument("--target-duration", type=float, default=29, help="Target output duration in seconds")
+    parser.add_argument("--vertical", action="store_true", default=True, help="Convert to vertical format")
+    parser.add_argument("--audio-volume", type=float, default=0.4, help="Background music volume")
+    parser.add_argument("--keep-original-audio", action="store_true", help="Keep original video audio")
+    parser.add_argument("--audio-fade-in", type=float, default=1.0, help="Audio fade-in duration")
+    parser.add_argument("--audio-fade-out", type=float, default=1.0, help="Audio fade-out duration")
+    
+    args = parser.parse_args()
+    
+    tool = ProcessVideoTool()
+    result = tool.execute(
+        video_path=args.video,
+        audio_path=args.audio,
+        output_dir=args.output_dir,
+        max_segment_duration_minutes=args.max_segment_minutes,
+        target_output_duration_seconds=args.target_duration,
+        vertical_mode=args.vertical,
+        audio_volume=args.audio_volume,
+        keep_original_audio=args.keep_original_audio,
+        audio_fade_in=args.audio_fade_in,
+        audio_fade_out=args.audio_fade_out
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output files: {result.metadata.get('output_files', [])}")
+    else:
+        print(f"Error: {result.error}")

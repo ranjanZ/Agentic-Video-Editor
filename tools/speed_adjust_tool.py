@@ -127,3 +127,33 @@ class SpeedAdjustTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "speed_adjust"}
             )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Adjust video playback speed")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--output", type=str, default="data/output/speed_adjusted_output.mp4", help="Path to output video")
+    parser.add_argument("--speed", type=float, default=1.0, help="Speed multiplier (e.g., 2.0 = 2x faster, 0.5 = half speed)")
+    parser.add_argument("--keep-pitch", action="store_true", help="Attempt to preserve audio pitch")
+    parser.add_argument("--fps", type=int, default=30, help="Output frame rate")
+    
+    args = parser.parse_args()
+    
+    tool = SpeedAdjustTool()
+    result = tool.execute(
+        video_path=args.video,
+        output_path=args.output,
+        speed_factor=args.speed,
+        keep_audio_pitch=args.keep_pitch,
+        fps=args.fps
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output: {result.output_path}")
+        print(f"Original duration: {result.metadata.get('original_duration', 0):.2f}s")
+        print(f"New duration: {result.metadata.get('new_duration', 0):.2f}s")
+    else:
+        print(f"Error: {result.error}")

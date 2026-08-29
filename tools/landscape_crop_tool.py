@@ -53,3 +53,31 @@ class LandscapeCropTool(BaseTool):
             return ToolResult(success=True, output_path=output_path, message=f"Converted to {width}x{height} landscape format", metadata={"aspect_ratio": "16:9"})
         except Exception as error:
             return ToolResult(success=False, error=str(error), metadata={"stage": "landscape_crop"})
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Convert video to 16:9 landscape format")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--output", type=str, default="data/output/landscape_output.mp4", help="Path to output video")
+    parser.add_argument("--width", type=int, default=1920, help="Output width in pixels")
+    parser.add_argument("--height", type=int, default=1080, help="Output height in pixels")
+    parser.add_argument("--fps", type=int, default=30, help="Output frame rate")
+    
+    args = parser.parse_args()
+    
+    tool = LandscapeCropTool()
+    result = tool.execute(
+        video_path=args.video,
+        output_path=args.output,
+        width=args.width,
+        height=args.height,
+        fps=args.fps
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output: {result.output_path}")
+    else:
+        print(f"Error: {result.error}")

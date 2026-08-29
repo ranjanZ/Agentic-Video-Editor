@@ -169,3 +169,39 @@ class AudioMixTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "audio_mix"}
             )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Mix background music with video audio")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--audio", type=str, default="data/input/input_audio.mp3", help="Path to background music file")
+    parser.add_argument("--output", type=str, default="data/output/audio_mixed_output.mp4", help="Path to output video")
+    parser.add_argument("--music-volume", type=float, default=0.3, help="Background music volume (0.0-1.0)")
+    parser.add_argument("--original-volume", type=float, default=1.0, help="Original audio volume (0.0-1.0)")
+    parser.add_argument("--fade-in", type=float, default=1.0, help="Fade-in duration in seconds")
+    parser.add_argument("--fade-out", type=float, default=1.0, help="Fade-out duration in seconds")
+    parser.add_argument("--start-seconds", type=float, default=0, help="Start position in audio track")
+    parser.add_argument("--loop", action="store_true", default=True, help="Loop audio if shorter than video")
+    
+    args = parser.parse_args()
+    
+    tool = AudioMixTool()
+    result = tool.execute(
+        video_path=args.video,
+        audio_path=args.audio,
+        output_path=args.output,
+        music_volume=args.music_volume,
+        original_volume=args.original_volume,
+        fade_in=args.fade_in,
+        fade_out=args.fade_out,
+        start_seconds=args.start_seconds,
+        loop_audio=args.loop
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output: {result.output_path}")
+    else:
+        print(f"Error: {result.error}")

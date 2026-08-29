@@ -167,6 +167,65 @@ Both URLs serve the same chat agent interface built in `web/workspace/`.
    - Example: "Convert this to vertical format for TikTok"
 3. **View Results**: The agent will process your request and show the output video
 
+### Running Tools Directly (Command Line)
+
+Each tool can be executed directly from the command line with default input from `data/input/` folder. Default video: `data/input/input.mkv`, Default audio: `data/input/input_audio.mp3`.
+
+**Quick Start:** Run any tool with `--help` to see all available options:
+```bash
+python -m tools.<tool_name> --help
+```
+
+#### 1. Video Split Tool
+Split video into segments with speed-up and background music:
+```bash
+python -m tools.video_split_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+```
+
+#### 2. Silence Removal Tool
+Remove silent portions from video using Whisper AI:
+```bash
+python -m tools.silence_removal_tool --video data/input/input.mkv --output data/output/no_silence_output.mp4 --model base --padding-ms 200
+```
+
+#### 3. Transcription Tool
+Transcribe speech from video to text:
+```bash
+python -m tools.transcription_tool --input data/input/input.mkv --model base --task transcribe
+```
+
+#### 4. Speed Adjust Tool
+Change video playback speed:
+```bash
+python -m tools.speed_adjust_tool --video data/input/input.mkv --output data/output/speed_adjusted_output.mp4 --speed 2.0
+```
+
+#### 5. Vertical Crop Tool
+Convert landscape video to 9:16 vertical format:
+```bash
+python -m tools.vertical_crop_tool --video data/input/input.mkv --output data/output/vertical_output.mp4 --width 1080 --height 1920
+```
+
+#### 6. Landscape Crop Tool
+Convert video to 16:9 landscape format:
+```bash
+python -m tools.landscape_crop_tool --video data/input/input.mkv --output data/output/landscape_output.mp4 --width 1920 --height 1080
+```
+
+#### 7. Audio Mix Tool
+Add background music to video:
+```bash
+python -m tools.audio_mix_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output data/output/audio_mixed_output.mp4 --music-volume 0.3
+```
+
+#### 8. Process Video Pipeline
+Complete pipeline: split, speed-up, and add background music:
+```bash
+python -m tools.process_video_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+```
+
+**Note:** All tools use default paths from the `data/input/` folder if no arguments are provided. Simply run `python -m tools.<tool_name>` to execute with defaults.
+
 ### Example Commands
 
 - "Split my video into 30-second segments with background music"
