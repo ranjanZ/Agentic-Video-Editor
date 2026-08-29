@@ -6,16 +6,28 @@ reusable tool interface for agentic invocation.
 """
 
 import os
+import sys
 import math
 from datetime import datetime
 from typing import Dict, Any, Optional
 
-from .base_tool import BaseTool, ToolResult
-from core.video_utils import (
-    VideoFileClip, AudioFileClip, CompositeAudioClip,
-    subclip, set_audio, apply_speed, make_vertical,
-    prepare_background_audio, probe_video
-)
+# Handle both direct execution and module import
+try:
+    from .base_tool import BaseTool, ToolResult
+    from core.video_utils import (
+        VideoFileClip, AudioFileClip, CompositeAudioClip,
+        subclip, set_audio, apply_speed, make_vertical,
+        prepare_background_audio, probe_video
+    )
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import BaseTool, ToolResult
+    from core.video_utils import (
+        VideoFileClip, AudioFileClip, CompositeAudioClip,
+        subclip, set_audio, apply_speed, make_vertical,
+        prepare_background_audio, probe_video
+    )
 
 
 class VideoSplitTool(BaseTool):

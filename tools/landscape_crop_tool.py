@@ -1,10 +1,18 @@
 """Convert a video to a browser-compatible 16:9 landscape output."""
 
 import os
+import sys
 from typing import Any, Dict
 
-from .base_tool import BaseTool, ToolResult
-from core.video_utils import VideoFileClip
+# Handle both direct execution and module import
+try:
+    from .base_tool import BaseTool, ToolResult
+    from core.video_utils import VideoFileClip
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import BaseTool, ToolResult
+    from core.video_utils import VideoFileClip
 
 
 class LandscapeCropTool(BaseTool):

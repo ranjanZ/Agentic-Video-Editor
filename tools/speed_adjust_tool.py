@@ -5,9 +5,18 @@ This tool adjusts the playback speed of a video, optionally with pitch correctio
 """
 
 import os
+import sys
 from typing import Dict, Any
-from .base_tool import BaseTool, ToolResult
-from core.video_utils import VideoFileClip, apply_speed, set_audio
+
+# Handle both direct execution and module import
+try:
+    from .base_tool import BaseTool, ToolResult
+    from core.video_utils import VideoFileClip, apply_speed, set_audio
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import BaseTool, ToolResult
+    from core.video_utils import VideoFileClip, apply_speed, set_audio
 
 
 class SpeedAdjustTool(BaseTool):
