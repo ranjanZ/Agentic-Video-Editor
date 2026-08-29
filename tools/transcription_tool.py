@@ -77,6 +77,7 @@ class TranscriptionTool(BaseTool):
         language: Optional[str] = None,
         task: str = "transcribe",
         word_timestamps: bool = False,
+        progress_callback=None,
         **kwargs
     ) -> ToolResult:
         """
@@ -88,11 +89,32 @@ class TranscriptionTool(BaseTool):
             language: Language code for forced language
             task: "transcribe" or "translate"
             word_timestamps: Include word-level timestamps
+            progress_callback: Optional callback function(progress: float, status: str)
             
         Returns:
             ToolResult with transcript and metadata
         """
+        def report_progress(progress: float, status: str):
+            """Report progress via callback and print to console."""
+            if progress_callback:
+                progress_callback(progress, status)
+            print(f"[Progress {progress*100:5.1f}%] {status}")
+        
         try:
+            # Print input parameters
+            print("\n" + "="*60)
+            print("TRANSCRIPTION TOOL")
+            print("="*60)
+            print(f"Input Parameters:")
+            print(f"  - input_path:       {input_path}")
+            print(f"  - model_size:       {model_size}")
+            print(f"  - language:         {language or 'auto-detect'}")
+            print(f"  - task:             {task}")
+            print(f"  - word_timestamps:  {word_timestamps}")
+            print("="*60 + "\n")
+            
+            report_progress(0.0, "Starting transcription...")
+            
             if not os.path.exists(input_path):
                 return ToolResult(
                     success=False,
@@ -104,6 +126,7 @@ class TranscriptionTool(BaseTool):
             
             # Extract audio if video
             if is_video:
+                report_progress(0.10, "Extracting audio from video...")
                 video = VideoFileClip(input_path)
                 if video.audio is None:
                     video.close()
@@ -114,11 +137,14 @@ class TranscriptionTool(BaseTool):
                 video.audio.write_audiofile(temp_audio, logger=None)
                 video.close()
                 audio_path = temp_audio
+                report_progress(0.20, "Audio extraction complete")
             else:
                 audio_path = input_path
             
             # Transcribe
+            report_progress(0.30, f"Loading Whisper model ({model_size})...")
             model = whisper.load_model(model_size)
+            report_progress(0.50, "Transcribing audio...")
             result = model.transcribe(
                 audio_path,
                 language=language,
@@ -126,6 +152,7 @@ class TranscriptionTool(BaseTool):
                 word_timestamps=word_timestamps,
                 fp16=False
             )
+            report_progress(0.90, "Transcription complete")
             
             # Cleanup temp file
             if is_video and os.path.exists(temp_audio):
@@ -141,6 +168,20 @@ class TranscriptionTool(BaseTool):
                     }
                     for seg in result["segments"]
                 ]
+            
+            report_progress(1.0, "Transcription finished!")
+            
+            # Print output summary
+            print("\n" + "="*60)
+            print("OUTPUT SUMMARY")
+            print("="*60)
+            print(f"Output Parameters:")
+            print(f"  - language:         {result.get('language', 'unknown')}")
+            print(f"  - num_segments:     {len(segments_info)}")
+            print(f"  - model_size:       {model_size}")
+            print(f"  - task:             {task}")
+            print(f"  - text_length:      {len(result['text'])} chars")
+            print("="*60 + "\n")
             
             return ToolResult(
                 success=True,
@@ -159,6 +200,7 @@ class TranscriptionTool(BaseTool):
             temp_audio = "temp_transcription_audio.wav"
             if os.path.exists(temp_audio):
                 os.remove(temp_audio)
+            report_progress(0.0, f"Error: {str(e)}")
             return ToolResult(
                 success=False,
                 error=str(e),
