@@ -6,11 +6,19 @@ and removes portions without speech.
 """
 
 import os
+import sys
 from typing import Dict, Any, List, Optional
 import whisper
-from moviepy import VideoFileClip, concatenate_videoclips
 
-from .base_tool import BaseTool, ToolResult
+# Handle both direct execution and module import
+try:
+    from .base_tool import BaseTool, ToolResult
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import BaseTool, ToolResult
+
+from moviepy import VideoFileClip, concatenate_videoclips
 
 
 class SilenceRemovalTool(BaseTool):
@@ -156,7 +164,10 @@ class SilenceRemovalTool(BaseTool):
                 start = max(0, seg["start"] - padding_sec)
                 end = min(video.duration, seg["end"] + padding_sec)
                 if end > start:
-                    clip_method = getattr(video, "subclipped", video.subclip)
+                    # Use subclipped for newer moviepy versions, fallback to subclip for older versions
+                    clip_method = getattr(video, "subclipped", None)
+                    if clip_method is None:
+                        clip_method = video.subclip
                     speech_clips.append(clip_method(start, end))
                     kept_segments.append({"start": start, "end": end})
             

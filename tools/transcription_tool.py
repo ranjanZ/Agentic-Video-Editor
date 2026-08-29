@@ -5,11 +5,18 @@ This tool extracts audio from video and transcribes it to text.
 """
 
 import os
+import sys
 from typing import Dict, Any, Optional
 import whisper
 from moviepy import VideoFileClip
 
-from .base_tool import BaseTool, ToolResult
+# Handle both direct execution and module import
+try:
+    from .base_tool import BaseTool, ToolResult
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import BaseTool, ToolResult
 
 
 class TranscriptionTool(BaseTool):

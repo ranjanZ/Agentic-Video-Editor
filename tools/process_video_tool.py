@@ -1,9 +1,18 @@
 """Agent-facing wrapper for the complete process_video pipeline."""
 
+import os
+import sys
 from typing import Any, Dict, Optional
 
-from .base_tool import ToolResult
-from .video_split_tool import VideoSplitTool
+# Handle both direct execution and module import
+try:
+    from .base_tool import ToolResult
+    from .video_split_tool import VideoSplitTool
+except ImportError:
+    # When running directly (not as a module), add parent directory to path
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tools.base_tool import ToolResult
+    from tools.video_split_tool import VideoSplitTool
 
 
 class ProcessVideoTool(VideoSplitTool):

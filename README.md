@@ -171,60 +171,104 @@ Both URLs serve the same chat agent interface built in `web/workspace/`.
 
 Each tool can be executed directly from the command line with default input from `data/input/` folder. Default video: `data/input/input.mkv`, Default audio: `data/input/input_audio.mp3`.
 
+**Two ways to run tools:**
+
+1. **Direct script execution** (recommended):
+```bash
+python tools/<tool_name>.py [arguments]
+```
+
+2. **Module execution**:
+```bash
+python -m tools.<tool_name> [arguments]
+```
+
 **Quick Start:** Run any tool with `--help` to see all available options:
 ```bash
-python -m tools.<tool_name> --help
+python tools/<tool_name>.py --help
 ```
 
 #### 1. Video Split Tool
 Split video into segments with speed-up and background music:
 ```bash
-python -m tools.video_split_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+# Using direct execution
+python tools/video_split_tool.py --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+
+# Or using module execution
+python -m tools.video_split_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output
 ```
 
 #### 2. Silence Removal Tool
 Remove silent portions from video using Whisper AI:
 ```bash
-python -m tools.silence_removal_tool --video data/input/input.mkv --output data/output/no_silence_output.mp4 --model base --padding-ms 200
+# Using direct execution
+python tools/silence_removal_tool.py --video data/input/input.mkv --output data/output/no_silence_output.mp4 --model base --padding-ms 200
+
+# Or using module execution
+python -m tools.silence_removal_tool --video data/input/input.mkv --output data/output/no_silence_output.mp4 --model tiny
 ```
 
 #### 3. Transcription Tool
 Transcribe speech from video to text:
 ```bash
-python -m tools.transcription_tool --input data/input/input.mkv --model base --task transcribe
+# Using direct execution
+python tools/transcription_tool.py --input data/input/input.mkv --model base --task transcribe
+
+# Or using module execution
+python -m tools.transcription_tool --input data/input/input.mkv --model tiny
 ```
 
 #### 4. Speed Adjust Tool
 Change video playback speed:
 ```bash
-python -m tools.speed_adjust_tool --video data/input/input.mkv --output data/output/speed_adjusted_output.mp4 --speed 2.0
+# Using direct execution
+python tools/speed_adjust_tool.py --video data/input/input.mkv --output data/output/speed_adjusted_output.mp4 --speed 2.0
+
+# Or using module execution
+python -m tools.speed_adjust_tool --video data/input/input.mkv --speed 1.5
 ```
 
 #### 5. Vertical Crop Tool
 Convert landscape video to 9:16 vertical format:
 ```bash
-python -m tools.vertical_crop_tool --video data/input/input.mkv --output data/output/vertical_output.mp4 --width 1080 --height 1920
+# Using direct execution
+python tools/vertical_crop_tool.py --video data/input/input.mkv --output data/output/vertical_output.mp4 --width 1080 --height 1920
+
+# Or using module execution
+python -m tools.vertical_crop_tool --video data/input/input.mkv --output data/output/vertical_output.mp4
 ```
 
 #### 6. Landscape Crop Tool
 Convert video to 16:9 landscape format:
 ```bash
-python -m tools.landscape_crop_tool --video data/input/input.mkv --output data/output/landscape_output.mp4 --width 1920 --height 1080
+# Using direct execution
+python tools/landscape_crop_tool.py --video data/input/input.mkv --output data/output/landscape_output.mp4 --width 1920 --height 1080
+
+# Or using module execution
+python -m tools.landscape_crop_tool --video data/input/input.mkv --output data/output/landscape_output.mp4
 ```
 
 #### 7. Audio Mix Tool
 Add background music to video:
 ```bash
-python -m tools.audio_mix_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output data/output/audio_mixed_output.mp4 --music-volume 0.3
+# Using direct execution
+python tools/audio_mix_tool.py --video data/input/input.mkv --audio data/input/input_audio.mp3 --output data/output/audio_mixed_output.mp4 --music-volume 0.3
+
+# Or using module execution
+python -m tools.audio_mix_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output data/output/audio_mixed_output.mp4
 ```
 
 #### 8. Process Video Pipeline
 Complete pipeline: split, speed-up, and add background music:
 ```bash
-python -m tools.process_video_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+# Using direct execution
+python tools/process_video_tool.py --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output --max-segment-minutes 20 --target-duration 29
+
+# Or using module execution
+python -m tools.process_video_tool --video data/input/input.mkv --audio data/input/input_audio.mp3 --output-dir data/output
 ```
 
-**Note:** All tools use default paths from the `data/input/` folder if no arguments are provided. Simply run `python -m tools.<tool_name>` to execute with defaults.
+**Note:** All tools use default paths from the `data/input/` folder if no arguments are provided. Simply run `python tools/<tool_name>.py` to execute with defaults.
 
 ### Example Commands
 
