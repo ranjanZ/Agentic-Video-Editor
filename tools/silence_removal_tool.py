@@ -1,7 +1,7 @@
 """
-Silence Removal Tool - Remove silent portions from video using Whisper.
+Silence Removal Tool - Remove silent portions from video using Whisper and audio energy detection.
 
-This tool analyzes audio in a video, detects speech segments using Whisper,
+This tool analyzes audio in a video, detects speech segments using Whisper and audio energy,
 and removes portions without speech.
 """
 
@@ -9,6 +9,8 @@ import os
 import sys
 from typing import Dict, Any, List, Optional
 import whisper
+import numpy as np
+from scipy.io import wavfile
 
 # Handle both direct execution and module import
 try:
@@ -71,6 +73,18 @@ class SilenceRemovalTool(BaseTool):
                     "description": "Transcription task",
                     "default": "translate",
                     "enum": ["transcribe", "translate"]
+                },
+                "use_energy_detection": {
+                    "type": "boolean",
+                    "description": "Use audio energy detection to find additional silent gaps",
+                    "default": True
+                },
+                "energy_threshold_factor": {
+                    "type": "number",
+                    "description": "Factor for energy-based silence detection (lower = more aggressive)",
+                    "default": 0.15,
+                    "minimum": 0.05,
+                    "maximum": 0.5
                 }
             },
             "required": ["video_path", "output_path"]
@@ -85,6 +99,8 @@ class SilenceRemovalTool(BaseTool):
         padding_ms: int = 200,
         threshold_db: float = -32,
         task: str = "translate",
+        use_energy_detection: bool = True,
+        energy_threshold_factor: float = 0.15,
         progress_callback=None,
         **kwargs
     ) -> ToolResult:
@@ -97,7 +113,10 @@ class SilenceRemovalTool(BaseTool):
             output_dir: Directory for output (used if output_path not provided)
             model_size: Whisper model size
             padding_ms: Padding around speech segments in milliseconds
+            threshold_db: Silence threshold in decibels
             task: "transcribe" or "translate"
+            use_energy_detection: Whether to use audio energy detection for better silence detection
+            energy_threshold_factor: Factor for energy-based silence detection
             progress_callback: Optional callback function(progress: float, status: str)
             
         Returns:
@@ -124,12 +143,14 @@ class SilenceRemovalTool(BaseTool):
             print("SILENCE REMOVAL TOOL")
             print("="*60)
             print(f"Input Parameters:")
-            print(f"  - video_path:     {video_path}")
-            print(f"  - output_path:    {output_path or '(auto-generated)'}")
-            print(f"  - model_size:     {model_size}")
-            print(f"  - padding_ms:     {padding_ms}ms")
-            print(f"  - threshold_db:   {threshold_db}dB")
-            print(f"  - task:           {task}")
+            print(f"  - video_path:             {video_path}")
+            print(f"  - output_path:            {output_path or '(auto-generated)'}")
+            print(f"  - model_size:             {model_size}")
+            print(f"  - padding_ms:             {padding_ms}ms")
+            print(f"  - threshold_db:           {threshold_db}dB")
+            print(f"  - task:                   {task}")
+            print(f"  - use_energy_detection:   {use_energy_detection}")
+            print(f"  - energy_threshold_factor:{energy_threshold_factor}")
             print("="*60 + "\n")
             
             report_progress(0.0, "Starting silence removal...")
@@ -163,7 +184,7 @@ class SilenceRemovalTool(BaseTool):
             video.close()
             report_progress(0.15, "Audio extraction complete")
             
-            # Step 2: Transcribe with timestamps
+            # Step 2: Transcribe with timestamps AND analyze audio energy
             report_progress(0.20, f"Loading Whisper model ({model_size})...")
             model = whisper.load_model(model_size)
             report_progress(0.30, "Transcribing audio with Whisper...")
@@ -183,7 +204,96 @@ class SilenceRemovalTool(BaseTool):
                     error="No speech segments detected in the audio"
                 )
             
-            report_progress(0.55, f"Found {len(segments)} speech segments")
+            report_progress(0.55, f"Found {len(segments)} speech segments from Whisper")
+            
+            # Step 2b: Use energy detection to find additional silent gaps within Whisper segments
+            if use_energy_detection:
+                report_progress(0.58, "Analyzing audio energy for better silence detection...")
+                
+                # Read audio file
+                sample_rate, audio_data = wavfile.read(temp_audio)
+                
+                # Convert to mono if stereo
+                if len(audio_data.shape) > 1:
+                    audio_data = audio_data.mean(axis=1)
+                
+                # Convert to float for calculations
+                audio_float = audio_data.astype(np.float32)
+                
+                # Calculate RMS energy in small windows (50ms)
+                window_size = int(0.05 * sample_rate)  # 50ms windows
+                hop_size = window_size // 2
+                
+                energies = []
+                for i in range(0, len(audio_float) - window_size, hop_size):
+                    window = audio_float[i:i + window_size]
+                    rms = np.sqrt(np.mean(window ** 2))
+                    energies.append(rms)
+                
+                energies = np.array(energies)
+                
+                # Calculate threshold based on energy distribution
+                # Use a percentage of max energy as threshold
+                max_energy = np.max(energies)
+                min_energy = np.min(energies[energies > 0]) if np.any(energies > 0) else 0
+                energy_threshold = min_energy + energy_threshold_factor * (max_energy - min_energy)
+                
+                # Also consider the dB threshold
+                db_threshold_linear = 10 ** (threshold_db / 20)  # Convert dB to linear scale
+                energy_threshold = max(energy_threshold, db_threshold_linear)
+                
+                # Find silent regions within Whisper segments
+                refined_segments = []
+                time_per_window = hop_size / sample_rate
+                
+                for seg_idx, seg in enumerate(segments):
+                    seg_start_window = int(seg["start"] / time_per_window)
+                    seg_end_window = int(seg["end"] / time_per_window)
+                    
+                    # Get energies for this segment
+                    seg_energies = energies[max(0, seg_start_window):min(len(energies), seg_end_window)]
+                    
+                    if len(seg_energies) == 0:
+                        continue
+                    
+                    # Find continuous non-silent regions within this segment
+                    is_speech = seg_energies >= energy_threshold
+                    
+                    # Find transitions
+                    speech_regions = []
+                    in_speech = False
+                    region_start = None
+                    
+                    for i, is_sp in enumerate(is_speech):
+                        if is_sp and not in_speech:
+                            in_speech = True
+                            region_start = seg["start"] + i * time_per_window
+                        elif not is_sp and in_speech:
+                            in_speech = False
+                            region_end = seg["start"] + i * time_per_window
+                            speech_regions.append((region_start, region_end))
+                    
+                    # Handle case where speech continues to end
+                    if in_speech:
+                        region_end = seg["end"]
+                        speech_regions.append((region_start, region_end))
+                    
+                    # Add refined segments
+                    for start, end in speech_regions:
+                        if end - start > 0.1:  # Only keep segments > 100ms
+                            refined_segments.append({
+                                "start": start,
+                                "end": end,
+                                "text": seg["text"]
+                            })
+                
+                if refined_segments:
+                    segments = refined_segments
+                    report_progress(0.60, f"Refined to {len(segments)} segments using energy detection")
+                else:
+                    report_progress(0.60, f"Keeping original {len(segments)} segments (energy detection found no refinements)")
+            else:
+                report_progress(0.60, f"Using {len(segments)} segments from Whisper only")
             
             # Step 3: Cut video using segments
             report_progress(0.60, "Processing video segments...")
@@ -298,6 +408,8 @@ if __name__ == "__main__":
     parser.add_argument("--padding-ms", type=int, default=200, help="Padding in milliseconds around speech segments")
     parser.add_argument("--threshold-db", type=float, default=-32, help="Silence threshold in decibels")
     parser.add_argument("--task", type=str, default="translate", choices=["transcribe", "translate"], help="Transcription task")
+    parser.add_argument("--use-energy-detection", action="store_true", default=True, help="Use audio energy detection for better silence removal")
+    parser.add_argument("--energy-threshold-factor", type=float, default=0.15, help="Energy threshold factor (lower = more aggressive)")
     
     args = parser.parse_args()
     
@@ -308,7 +420,9 @@ if __name__ == "__main__":
         model_size=args.model,
         padding_ms=args.padding_ms,
         threshold_db=args.threshold_db,
-        task=args.task
+        task=args.task,
+        use_energy_detection=args.use_energy_detection,
+        energy_threshold_factor=args.energy_threshold_factor
     )
     
     if result.success:
