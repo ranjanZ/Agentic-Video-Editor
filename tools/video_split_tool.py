@@ -106,6 +106,7 @@ class VideoSplitTool(BaseTool):
         threads: int = 4,
         preset: str = "fast",
         output_format: str = "mp4",
+        progress_callback=None,
         **kwargs
     ) -> ToolResult:
         """
@@ -133,11 +134,34 @@ class VideoSplitTool(BaseTool):
             threads: Encoding threads
             preset: Encoding preset
             output_format: Output file format
+            progress_callback: Optional callback function(progress: float, status: str)
             
         Returns:
             ToolResult with list of generated files
         """
+        def report_progress(progress: float, status: str):
+            """Report progress via callback and print to console."""
+            if progress_callback:
+                progress_callback(progress, status)
+            print(f"[Progress {progress*100:5.1f}%] {status}")
+        
         try:
+            # Print input parameters
+            print("\n" + "="*60)
+            print("VIDEO SPLIT TOOL")
+            print("="*60)
+            print(f"Input Parameters:")
+            print(f"  - video_path:             {video_path}")
+            print(f"  - audio_path:             {audio_path}")
+            print(f"  - output_dir:             {output_dir}")
+            print(f"  - max_segment_duration:   {max_segment_duration_minutes}min")
+            print(f"  - target_duration:        {target_output_duration_seconds}s")
+            print(f"  - vertical_mode:          {vertical_mode}")
+            print(f"  - audio_volume:           {audio_volume}")
+            print("="*60 + "\n")
+            
+            report_progress(0.0, "Starting video split pipeline...")
+            
             # Validate inputs
             if not os.path.exists(video_path):
                 return ToolResult(
@@ -150,6 +174,7 @@ class VideoSplitTool(BaseTool):
                     error=f"Audio file not found: {audio_path}"
                 )
             
+            report_progress(0.05, "Loading video file...")
             os.makedirs(output_dir, exist_ok=True)
             
             # Generate timestamp for output files
@@ -159,6 +184,8 @@ class VideoSplitTool(BaseTool):
             video = VideoFileClip(video_path)
             total_duration = video.duration
             max_segment_duration = max_segment_duration_minutes * 60
+            
+            report_progress(0.10, f"Video loaded: {total_duration:.1f}s")
             
             # Calculate segments
             num_segments = math.ceil(total_duration / max_segment_duration)
@@ -170,8 +197,10 @@ class VideoSplitTool(BaseTool):
             
             # Calculate constant speedup
             speedup = max_segment_duration / target_output_duration_seconds
+            report_progress(0.15, f"Calculated {num_segments} segments, speedup factor: {speedup:.2f}x")
             
             # Load background audio
+            report_progress(0.20, "Loading background audio...")
             bg_audio = AudioFileClip(audio_path)
             
             import random
@@ -189,6 +218,9 @@ class VideoSplitTool(BaseTool):
             
             for idx, (start, end, seg_dur) in enumerate(segments):
                 seg_num = idx + 1
+                segment_progress = 0.25 + (0.70 * idx / num_segments)
+                report_progress(segment_progress, f"Processing segment {seg_num}/{num_segments}...")
+                
                 output_duration = seg_dur / speedup
                 
                 # Pick audio start position
@@ -223,6 +255,7 @@ class VideoSplitTool(BaseTool):
                 out_name = f"segment_{seg_num:03d}_{timestamp}_{int(max_segment_duration_minutes)}min_sped_{int(target_output_duration_seconds)}s.{output_format}"
                 output_path = os.path.join(output_dir, out_name)
                 
+                report_progress(segment_progress + 0.05, f"Rendering segment {seg_num}...")
                 final_clip.write_videofile(
                     output_path,
                     fps=output_fps,
@@ -245,6 +278,21 @@ class VideoSplitTool(BaseTool):
             video.close()
             bg_audio.close()
             
+            report_progress(1.0, f"Video split complete! Generated {len(output_files)} segments")
+            
+            # Print output summary
+            print("\n" + "="*60)
+            print("OUTPUT SUMMARY")
+            print("="*60)
+            print(f"Output Parameters:")
+            print(f"  - num_segments:       {num_segments}")
+            print(f"  - speedup_factor:     {speedup:.2f}x")
+            print(f"  - total_input_dur:    {total_duration:.1f}s")
+            print(f"  - output_files:       {len(output_files)}")
+            for f in output_files:
+                print(f"    - {f}")
+            print("="*60 + "\n")
+            
             return ToolResult(
                 success=True,
                 message=f"Successfully processed {len(output_files)} segments",
@@ -259,6 +307,7 @@ class VideoSplitTool(BaseTool):
             )
             
         except Exception as e:
+            report_progress(0.0, f"Error: {str(e)}")
             return ToolResult(
                 success=False,
                 error=str(e),

@@ -72,6 +72,7 @@ class VerticalCropTool(BaseTool):
         width: int = 1080,
         height: int = 1920,
         fps: int = 30,
+        progress_callback=None,
         **kwargs
     ) -> ToolResult:
         """
@@ -83,23 +84,47 @@ class VerticalCropTool(BaseTool):
             width: Output width (default 1080)
             height: Output height (default 1920)
             fps: Output frame rate
+            progress_callback: Optional callback function(progress: float, status: str)
             
         Returns:
             ToolResult with output path and resolution info
         """
+        def report_progress(progress: float, status: str):
+            """Report progress via callback and print to console."""
+            if progress_callback:
+                progress_callback(progress, status)
+            print(f"[Progress {progress*100:5.1f}%] {status}")
+        
         try:
+            # Print input parameters
+            print("\n" + "="*60)
+            print("VERTICAL CROP TOOL")
+            print("="*60)
+            print(f"Input Parameters:")
+            print(f"  - video_path:     {video_path}")
+            print(f"  - output_path:    {output_path}")
+            print(f"  - width:          {width}px")
+            print(f"  - height:         {height}px")
+            print(f"  - fps:            {fps}")
+            print("="*60 + "\n")
+            
+            report_progress(0.0, "Starting vertical crop...")
+            
             if not os.path.exists(video_path):
                 return ToolResult(
                     success=False,
                     error=f"Video file not found: {video_path}"
                 )
             
+            report_progress(0.10, "Loading video file...")
             video = VideoFileClip(video_path)
             original_size = video.size
             
+            report_progress(0.30, f"Applying vertical crop ({width}x{height})...")
             # Apply vertical crop
             vertical_video = make_vertical(video, width, height)
             
+            report_progress(0.60, f"Rendering output video...")
             # Write output
             vertical_video.write_videofile(
                 output_path,
@@ -111,6 +136,19 @@ class VerticalCropTool(BaseTool):
             
             video.close()
             vertical_video.close()
+            
+            report_progress(1.0, "Vertical crop complete!")
+            
+            # Print output summary
+            print("\n" + "="*60)
+            print("OUTPUT SUMMARY")
+            print("="*60)
+            print(f"Output Parameters:")
+            print(f"  - output_path:        {output_path}")
+            print(f"  - original_resolution: {original_size[0]}x{original_size[1]}")
+            print(f"  - new_resolution:     {width}x{height}")
+            print(f"  - aspect_ratio:       9:16")
+            print("="*60 + "\n")
             
             return ToolResult(
                 success=True,
@@ -124,6 +162,7 @@ class VerticalCropTool(BaseTool):
             )
             
         except Exception as e:
+            report_progress(0.0, f"Error: {str(e)}")
             return ToolResult(
                 success=False,
                 error=str(e),

@@ -156,12 +156,33 @@ def create_app(config=None):
             return jsonify({'error': f'Tool {tool_name} not found'}), 404
         
         data = request.json or {}
+        
+        # Create progress tracking for this tool execution
+        progress_state = {"progress": 0.0, "status": "initializing"}
+        
+        def progress_callback(progress: float, status: str):
+            """Update progress state for polling."""
+            progress_state["progress"] = progress
+            progress_state["status"] = status
+            print(f"[API Progress {progress*100:5.1f}%] {status}")
+        
+        # Add progress callback to data if tool supports it
+        import inspect
+        sig = inspect.signature(tool.execute)
+        if "progress_callback" in sig.parameters:
+            data["progress_callback"] = progress_callback
+        
         result = tool.execute(**data)
         
+        # Include progress info in response
+        response_data = result.to_dict()
+        response_data["progress"] = progress_state["progress"]
+        response_data["final_status"] = progress_state["status"]
+        
         if result.success:
-            return jsonify(result.to_dict())
+            return jsonify(response_data)
         else:
-            return jsonify(result.to_dict()), 400
+            return jsonify(response_data), 400
     
     @app.route('/api/agent/chat', methods=['POST'])
     def agent_chat():
