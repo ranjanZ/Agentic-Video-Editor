@@ -120,3 +120,32 @@ class VerticalCropTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "vertical_crop"}
             )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Convert video to 9:16 vertical format")
+    parser.add_argument("--video", type=str, default="data/input/input.mkv", help="Path to input video")
+    parser.add_argument("--output", type=str, default="data/output/vertical_output.mp4", help="Path to output video")
+    parser.add_argument("--width", type=int, default=1080, help="Output width in pixels")
+    parser.add_argument("--height", type=int, default=1920, help="Output height in pixels")
+    parser.add_argument("--fps", type=int, default=30, help="Output frame rate")
+    
+    args = parser.parse_args()
+    
+    tool = VerticalCropTool()
+    result = tool.execute(
+        video_path=args.video,
+        output_path=args.output,
+        width=args.width,
+        height=args.height,
+        fps=args.fps
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Output: {result.output_path}")
+        print(f"Resolution: {result.metadata.get('new_resolution', 'N/A')}")
+    else:
+        print(f"Error: {result.error}")

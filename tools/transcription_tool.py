@@ -157,3 +157,32 @@ class TranscriptionTool(BaseTool):
                 error=str(e),
                 metadata={"stage": "transcription"}
             )
+
+
+if __name__ == "__main__":
+    import argparse
+    
+    parser = argparse.ArgumentParser(description="Transcribe speech from video or audio using Whisper")
+    parser.add_argument("--input", type=str, default="data/input/input.mkv", help="Path to input video or audio file")
+    parser.add_argument("--model", type=str, default="base", choices=["tiny", "base", "small", "medium", "large"], help="Whisper model size")
+    parser.add_argument("--language", type=str, default=None, help="Language code (e.g., 'en', 'es'). Auto-detect if None")
+    parser.add_argument("--task", type=str, default="transcribe", choices=["transcribe", "translate"], help="Task type")
+    parser.add_argument("--word-timestamps", action="store_true", help="Include word-level timestamps")
+    
+    args = parser.parse_args()
+    
+    tool = TranscriptionTool()
+    result = tool.execute(
+        input_path=args.input,
+        model_size=args.model,
+        language=args.language,
+        task=args.task,
+        word_timestamps=args.word_timestamps
+    )
+    
+    if result.success:
+        print(f"Success: {result.message}")
+        print(f"Language: {result.metadata.get('language', 'unknown')}")
+        print(f"\nFull Transcript:\n{result.metadata.get('full_text', '')}")
+    else:
+        print(f"Error: {result.error}")
